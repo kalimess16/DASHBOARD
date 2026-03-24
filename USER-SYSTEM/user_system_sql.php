@@ -55,8 +55,9 @@ function user_system_insert_sql(): string
             hashps,
             MAPHONG,
             MACHUCVU,
-            email
-        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?)
+            email,
+            menudp
+        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?,'ALL')
     ";
 }
 
