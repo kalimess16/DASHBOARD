@@ -1,0 +1,9 @@
+﻿RewriteEngine On
+
+# Pretty URL for inline file viewer
+RewriteRule ^file/([0-9]+)/([^/]+)\.pdf$ VB_IOT/view_file.php?id=$1&raw=1 [L,QSA,NC]
+
+# Internally map index.html to index.php (no external redirect)
+RewriteRule ^index\.html$ index.php [L,QSA,NC]
+
+

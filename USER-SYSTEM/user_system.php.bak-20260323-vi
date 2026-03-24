@@ -1,0 +1,703 @@
+<?php
+$sessionLifetime = 30 * 24 * 60 * 60;
+ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
+ini_set('session.cookie_lifetime', (string)$sessionLifetime);
+session_name('DASHBOARD_USER_SYSTEM_SESSID');
+$sessionCookieParams = session_get_cookie_params();
+session_set_cookie_params([
+    'lifetime' => $sessionLifetime,
+    'path' => '/dashboard',
+    'domain' => $sessionCookieParams['domain'] ?? '',
+    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
+    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
+    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
+]);
+session_start();
+
+header('Content-Type: text/html; charset=UTF-8');
+require_once __DIR__ . '/../DB/connect_DB.php';
+require_once __DIR__ . '/user_system_sql.php';
+
+$dashboard_default_conn = $conn ?? null;
+$dashboard_default_mysql_host = (string)($GLOBALS['mysqlActiveHost'] ?? $sourceHost ?? '');
+$user_system_db_name = 'qlcv';
+$user_system_conn = null;
+if (function_exists('connect_mysql') && !empty($sourceHost)) {
+    $user_system_conn = connect_mysql($sourceHost, $sourceUser, $sourcePass, $user_system_db_name, $sourcePort);
+    if ($user_system_conn !== null) {
+        $conn = $user_system_conn;
+        $GLOBALS['mysqlActiveHost'] = $sourceHost;
+    }
+}
+if ($conn === null) {
+    $conn = $dashboard_default_conn;
+    if ($conn === null) {
+        die('Khong ket noi duoc DB cho USER-SYSTEM.');
+    }
+    $GLOBALS['mysqlActiveHost'] = $dashboard_default_mysql_host;
+}
+
+if (function_exists('db_allow_protected_host_writes')) {
+    db_allow_protected_host_writes((string)($GLOBALS['mysqlActiveHost'] ?? $sourceHost ?? ''));
+}
+
+function json_exit(array $payload): void
+{
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function normalize_text(string $value): string
+{
+    return trim(preg_replace('/\s+/', ' ', $value) ?? $value);
+}
+
+function user_system_row_matches(array $row, string $keyword): bool
+{
+    $keyword = trim($keyword);
+    if ($keyword === '') {
+        return true;
+    }
+
+    if (function_exists('mb_strtolower')) {
+        $keyword = mb_strtolower($keyword, 'UTF-8');
+    } else {
+        $keyword = strtolower($keyword);
+    }
+
+    $haystack = implode(' ', [
+        (string)($row['macanbo'] ?? ''),
+        (string)($row['hoten'] ?? ''),
+        (string)($row['mota'] ?? ''),
+        (string)($row['tenphong'] ?? ''),
+        (string)($row['email'] ?? ''),
+        (string)($row['maphong'] ?? ''),
+        (string)($row['machucvu'] ?? ''),
+    ]);
+
+    if (function_exists('mb_strtolower')) {
+        $haystack = mb_strtolower($haystack, 'UTF-8');
+    } else {
+        $haystack = strtolower($haystack);
+    }
+
+    return strpos($haystack, $keyword) !== false;
+}
+
+function db_fetch_assoc_rows(mysqli $conn, string $sql, array $binds = [], ?string &$err = null): ?array
+{
+    $stmt = db_mysqli_prepare($conn, $sql);
+    if ($stmt === false) {
+        $err = $conn->error !== '' ? $conn->error : 'Khong prepare duoc SQL.';
+        return null;
+    }
+
+    $bind_vars = [];
+    if (!empty($binds)) {
+        $types = '';
+        foreach ($binds as $value) {
+            if (is_int($value)) {
+                $types .= 'i';
+            } elseif (is_float($value)) {
+                $types .= 'd';
+            } else {
+                $types .= 's';
+            }
+        }
+        foreach ($binds as $idx => $value) {
+            $bind_vars[$idx] = $value;
+        }
+        $params = [$types];
+        foreach ($bind_vars as &$ref) {
+            $params[] = &$ref;
+        }
+        unset($ref);
+        call_user_func_array([$stmt, 'bind_param'], $params);
+    }
+
+    if (!$stmt->execute()) {
+        $err = $stmt->error !== '' ? $stmt->error : 'Khong execute duoc SQL.';
+        $stmt->close();
+        return null;
+    }
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($result && ($row = $result->fetch_assoc())) {
+        $rows[] = $row;
+    }
+    if ($result) {
+        $result->close();
+    }
+    $stmt->close();
+    return $rows;
+}
+
+function db_fetch_one_assoc(mysqli $conn, string $sql, array $binds = [], ?string &$err = null): ?array
+{
+    $rows = db_fetch_assoc_rows($conn, $sql, $binds, $err);
+    if ($rows === null) {
+        return null;
+    }
+    return $rows[0] ?? [];
+}
+
+function user_system_flash_set(string $message, string $type = 'info'): void
+{
+    $_SESSION['user_system_flash'] = [
+        'message' => $message,
+        'type' => $type,
+    ];
+}
+
+function user_system_flash_take(): array
+{
+    $flash = $_SESSION['user_system_flash'] ?? [];
+    unset($_SESSION['user_system_flash']);
+    return is_array($flash) ? $flash : [];
+}
+
+function user_system_text(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+$index_url = '/dashboard/USER-SYSTEM/user_system.php';
+$keyword = normalize_text((string)($_GET['keyword'] ?? ''));
+$macanbo = normalize_text((string)($_GET['macanbo'] ?? ''));
+$page = max(1, (int)($_GET['page'] ?? 1));
+$per_page = 20;
+$flash = user_system_flash_take();
+$query_error = '';
+$query_hint = 'Khung nÃƒÂ y Ã„â€˜ÃƒÂ£ sÃ¡ÂºÂµn sÃƒÂ ng cho SQL cÃ¡Â»Â§a bÃ¡ÂºÂ¡n. ChÃ¡Â»â€° cÃ¡ÂºÂ§n thay phÃ¡ÂºÂ§n TODO trong `user_system_sql.php`.';
+$list_rows = [];
+$current_user = [
+    'macanbo' => '',
+    'hoten' => '',
+    'mota' => '',
+    'tenphong' => '',
+    'email' => '',
+    'maphong' => '',
+    'machucvu' => '',
+    'password_hash' => '',
+];
+
+if (isset($_GET['api']) && $_GET['api'] === 'detail') {
+    $api_code = normalize_text((string)($_GET['id'] ?? ''));
+    if ($api_code === '') {
+        json_exit(['ok' => false, 'message' => 'Thieu macanbo.']);
+    }
+    $detail_err = '';
+    $detail_row = db_fetch_one_assoc($conn, user_system_detail_sql(), [$api_code], $detail_err);
+    if ($detail_row === null) {
+        json_exit(['ok' => false, 'message' => $detail_err !== '' ? $detail_err : 'Khong doc duoc thong tin user.']);
+    }
+    json_exit(['ok' => true, 'row' => $detail_row]);
+}
+
+if (isset($_GET['api']) && $_GET['api'] === 'list') {
+    $list_err = '';
+    $rows = db_fetch_assoc_rows($conn, user_system_list_sql(), [], $list_err);
+    if ($rows === null) {
+        json_exit(['ok' => false, 'message' => $list_err !== '' ? $list_err : 'Khong doc duoc danh sach user.', 'rows' => []]);
+    }
+    $filtered = [];
+    foreach ($rows as $row) {
+        if (user_system_row_matches($row, $keyword)) {
+            $filtered[] = $row;
+        }
+    }
+    $total_filtered = count($filtered);
+    $page_count = max(1, (int)ceil($total_filtered / $per_page));
+    if ($page > $page_count) {
+        $page = $page_count;
+    }
+    $offset = ($page - 1) * $per_page;
+    $filtered = array_slice($filtered, $offset, $per_page);
+    json_exit([
+        'ok' => true,
+        'total' => $total_filtered,
+        'page' => $page,
+        'per_page' => $per_page,
+        'total_pages' => $page_count,
+        'rows' => $filtered,
+    ]);
+}
+
+if (isset($_POST['action']) && $_POST['action'] === 'save') {
+    $confirm_write = trim((string)($_POST['confirm_write'] ?? '0'));
+    $original_macanbo = normalize_text((string)($_POST['original_macanbo'] ?? ''));
+    $posted_macanbo = normalize_text((string)($_POST['macanbo'] ?? ''));
+    $is_update = $original_macanbo !== '';
+    $action_text = $is_update ? 'cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t' : 'thÃƒÂªm mÃ¡Â»â€ºi';
+
+    if ($confirm_write !== '1') {
+        user_system_flash_set('BÃ¡ÂºÂ¡n cÃƒÂ³ xÃƒÂ¡c nhÃ¡ÂºÂ­n muÃ¡Â»â€˜n ' . $action_text . ' user nÃƒÂ y khÃƒÂ´ng? HÃƒÂ£y xÃƒÂ¡c nhÃ¡ÂºÂ­n trÃƒÂªn giao diÃ¡Â»â€¡n.', 'error');
+        header('Location: ' . $index_url . '?' . http_build_query([
+            'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
+            'keyword' => $keyword,
+        ]));
+        exit;
+    }
+
+    $hoten = normalize_text((string)($_POST['hoten'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
+    $maphong = normalize_text((string)($_POST['maphong'] ?? ''));
+    $machucvu = normalize_text((string)($_POST['machucvu'] ?? ''));
+    $email = normalize_text((string)($_POST['email'] ?? ''));
+
+    if ($posted_macanbo === '' || $hoten === '') {
+        user_system_flash_set('Vui lÃƒÂ²ng nhÃ¡ÂºÂ­p mÃƒÂ£ cÃƒÂ¡n bÃ¡Â»â„¢ vÃƒÂ  hÃ¡Â»Â tÃƒÂªn.', 'error');
+        header('Location: ' . $index_url . '?' . http_build_query([
+            'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
+            'keyword' => $keyword,
+        ]));
+        exit;
+    }
+
+    $write_err = '';
+    if (!$is_update) {
+        if (trim($password) === '') {
+            $write_err = html_entity_decode('Vui l&#242;ng nh&#7853;p m&#7853;t kh&#7849;u khi th&#234;m m&#7899;i.', ENT_QUOTES, 'UTF-8');
+        } else {
+            $hashps = $password;
+            $sql = user_system_insert_sql();
+            $stmt = db_mysqli_prepare($conn, $sql);
+            if ($stmt === false) {
+                $write_err = $conn->error !== '' ? $conn->error : 'Khong prepare duoc insert SQL.';
+            } else {
+                $bind_ok = $stmt->bind_param('ssssss', $posted_macanbo, $hoten, $hashps, $maphong, $machucvu, $email);
+                if ($bind_ok === false || !$stmt->execute()) {
+                    $write_err = $stmt->error !== '' ? $stmt->error : 'Khong insert duoc user.';
+                }
+                $stmt->close();
+            }
+        }
+    } else {
+        if (trim($password) !== '') {
+            $hashps = $password;
+            $sql = user_system_update_sql(true);
+            $stmt = db_mysqli_prepare($conn, $sql);
+            if ($stmt === false) {
+                $write_err = $conn->error !== '' ? $conn->error : 'Khong prepare duoc update SQL.';
+            } else {
+                $bind_ok = $stmt->bind_param('ssssss', $hoten, $hashps, $maphong, $machucvu, $email, $original_macanbo);
+                if ($bind_ok === false || !$stmt->execute()) {
+                    $write_err = $stmt->error !== '' ? $stmt->error : 'Khong update duoc user.';
+                }
+                $stmt->close();
+            }
+        } else {
+            $sql = user_system_update_sql(false);
+            $stmt = db_mysqli_prepare($conn, $sql);
+            if ($stmt === false) {
+                $write_err = $conn->error !== '' ? $conn->error : 'Khong prepare duoc update SQL.';
+            } else {
+                $bind_ok = $stmt->bind_param('sssss', $hoten, $maphong, $machucvu, $email, $original_macanbo);
+                if ($bind_ok === false || !$stmt->execute()) {
+                    $write_err = $stmt->error !== '' ? $stmt->error : 'Khong update duoc user.';
+                }
+                $stmt->close();
+            }
+        }
+    }
+
+    if ($write_err !== '') {
+        user_system_flash_set('LÃ†Â°u thÃ¡ÂºÂ¥t bÃ¡ÂºÂ¡i: ' . $write_err, 'error');
+    } else {
+        user_system_flash_set($is_update ? 'Ã„ÂÃƒÂ£ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t user thÃƒÂ nh cÃƒÂ´ng.' : 'Ã„ÂÃƒÂ£ thÃƒÂªm mÃ¡Â»â€ºi user thÃƒÂ nh cÃƒÂ´ng.', 'info');
+    }
+
+    header('Location: ' . $index_url . '?' . http_build_query([
+        'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
+        'keyword' => $keyword,
+    ]));
+    exit;
+}
+
+$list_err = '';
+$all_rows = db_fetch_assoc_rows($conn, user_system_list_sql(), [], $list_err);
+if ($all_rows === null) {
+    $query_error = $list_err !== '' ? $list_err : 'Khong doc duoc danh sach user.';
+    $all_rows = [];
+}
+$filtered_rows = [];
+foreach ($all_rows as $row) {
+    if (user_system_row_matches($row, $keyword)) {
+        $filtered_rows[] = $row;
+    }
+}
+
+$total_rows = count($filtered_rows);
+$total_pages = max(1, (int)ceil($total_rows / $per_page));
+if ($page > $total_pages) {
+    $page = $total_pages;
+}
+$offset = ($page - 1) * $per_page;
+$list_rows = array_slice($filtered_rows, $offset, $per_page);
+$page_start = $total_rows > 0 ? $offset + 1 : 0;
+$page_end = min($offset + $per_page, $total_rows);
+
+$stats = [
+    'total' => $total_rows,
+    'phong' => [],
+    'chucvu' => [],
+    'email' => 0,
+];
+foreach ($filtered_rows as $row) {
+    $tenphong = trim((string)($row['tenphong'] ?? ''));
+    $mota = trim((string)($row['mota'] ?? ''));
+    $email_value = trim((string)($row['email'] ?? ''));
+    if ($tenphong !== '') {
+        $stats['phong'][$tenphong] = true;
+    }
+    if ($mota !== '') {
+        $stats['chucvu'][$mota] = true;
+    }
+    if ($email_value !== '') {
+        $stats['email']++;
+    }
+}
+$stats['phong'] = count($stats['phong']);
+$stats['chucvu'] = count($stats['chucvu']);
+
+if ($macanbo !== '') {
+    $detail_err = '';
+    $detail_row = db_fetch_one_assoc($conn, user_system_detail_sql(), [$macanbo], $detail_err);
+    if ($detail_row === null) {
+        $query_error = $detail_err !== '' ? $detail_err : 'Khong doc duoc thong tin user.';
+    } elseif (!empty($detail_row)) {
+        $current_user = array_merge($current_user, $detail_row);
+    }
+}
+
+$canonical_params = [];
+if ($keyword !== '') {
+    $canonical_params['keyword'] = $keyword;
+}
+if ($macanbo !== '') {
+    $canonical_params['macanbo'] = $macanbo;
+}
+if ($page > 1) {
+    $canonical_params['page'] = $page;
+}
+?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User System</title>
+<link rel="stylesheet" href="../view/Style_user_system.php">
+</head>
+<body>
+<div class="container">
+    <header class="hero">
+        <div class="hero-copy">
+            <div class="eyebrow">USER-SYSTEM</div>
+            <h1>QuÃ¡ÂºÂ£n lÃƒÂ½ cÃƒÂ¡n bÃ¡Â»â„¢</h1>
+            <p>
+                MÃƒÂ n nÃƒÂ y Ã„â€˜ang Ã„â€˜Ã¡Â»Âc tÃ¡Â»Â« cÃƒÂ¡c bÃ¡ÂºÂ£ng `canbo`, `phongban` vÃƒÂ  `CHUCVU` trÃƒÂªn database `qlcv`.
+                Khi thÃƒÂªm hoÃ¡ÂºÂ·c cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t, hÃ¡Â»â€¡ thÃ¡Â»â€˜ng sÃ¡ÂºÂ½ hÃ¡Â»Âi xÃƒÂ¡c nhÃ¡ÂºÂ­n trÃ†Â°Ã¡Â»â€ºc khi ghi dÃ¡Â»Â¯ liÃ¡Â»â€¡u.
+            </p>
+        </div>
+        <div class="hero-actions">
+            <a class="hero-btn hero-btn-primary" href="<?php echo $index_url; ?>">+ ThÃƒÂªm cÃƒÂ¡n bÃ¡Â»â„¢</a>
+            <button type="button" class="hero-btn" id="reloadListBtn">TÃ¡ÂºÂ£i lÃ¡ÂºÂ¡i danh sÃƒÂ¡ch</button>
+            <a class="hero-btn hero-btn-ghost" href="<?php echo $index_url; ?>">XÃƒÂ³a lÃ¡Â»Âc</a>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">TÃ¡Â»â€¢ng cÃƒÂ¡n bÃ¡Â»â„¢</span>
+            <strong><?php echo number_format((int)$stats['total']); ?></strong>
+            <small>SÃ¡Â»â€˜ bÃ¡ÂºÂ£n ghi Ã„â€˜ang hiÃ¡Â»Æ’n thÃ¡Â»â€¹</small>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">PhÃƒÂ²ng ban</span>
+            <strong><?php echo number_format((int)$stats['phong']); ?></strong>
+            <small>SÃ¡Â»â€˜ phÃƒÂ²ng ban khÃƒÂ¡c nhau</small>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">ChÃ¡Â»Â©c vÃ¡Â»Â¥</span>
+            <strong><?php echo number_format((int)$stats['chucvu']); ?></strong>
+            <small>SÃ¡Â»â€˜ chÃ¡Â»Â©c vÃ¡Â»Â¥ khÃƒÂ¡c nhau</small>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">CÃƒÂ³ email</span>
+            <strong><?php echo number_format((int)$stats['email']); ?></strong>
+            <small>SÃ¡Â»â€˜ cÃƒÂ¡n bÃ¡Â»â„¢ cÃƒÂ³ email</small>
+        </article>
+    </section>
+
+    <form method="get" action="<?php echo $index_url; ?>" class="search-bar" id="filterForm">
+        <input type="text" name="keyword" class="field-keyword" placeholder="TÃƒÂ¬m theo mÃƒÂ£ cÃƒÂ¡n bÃ¡Â»â„¢, hÃ¡Â»Â tÃƒÂªn, phÃƒÂ²ng, chÃ¡Â»Â©c vÃ¡Â»Â¥, email..." value="<?php echo user_system_text($keyword); ?>">
+        <input type="hidden" name="page" id="filterPage" value="<?php echo (int)$page; ?>">
+        <button type="submit" class="btn-search">LÃ¡Â»Âc danh sÃƒÂ¡ch</button>
+    </form>
+
+    <?php if (!empty($flash['message'])): ?>
+        <div class="notice <?php echo (($flash['type'] ?? 'info') === 'error') ? 'notice-error' : 'notice-info'; ?>">
+            <?php echo user_system_text((string)$flash['message']); ?>
+        </div>
+    <?php elseif ($query_error !== ''): ?>
+        <div class="notice notice-error"><?php echo user_system_text($query_error); ?></div>
+    <?php else: ?>
+        <div class="notice notice-info">
+            <?php echo user_system_text($query_hint); ?>
+            <?php if ($total_rows > 0): ?>
+                <span style="display:block;margin-top:6px;">
+                    Ã„Âang hiÃ¡Â»Æ’n thÃ¡Â»â€¹ <?php echo number_format($page_start); ?> - <?php echo number_format($page_end); ?> / <?php echo number_format($total_rows); ?> dÃƒÂ²ng.
+                </span>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <section class="workspace">
+        <div class="panel panel-table">
+            <div class="panel-head">
+                <div>
+                    <h2>Danh sÃƒÂ¡ch cÃƒÂ¡n bÃ¡Â»â„¢</h2>
+                    <p>BÃ¡Â»â€˜ cÃ¡Â»Â¥c sÃ¡ÂºÂµn cho table + action theo SQL bÃ¡ÂºÂ¡n Ã„â€˜ang dÃƒÂ¹ng.</p>
+                </div>
+                <div class="panel-tools">
+                    <input type="text" class="quick-filter" id="quickFilter" placeholder="LÃ¡Â»Âc nhanh trong bÃ¡ÂºÂ£ng...">
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 6%;">STT</th>
+                            <th style="width: 16%;">MÃƒÂ£ cÃƒÂ¡n bÃ¡Â»â„¢</th>
+                            <th style="width: 24%;">HÃ¡Â»Â tÃƒÂªn</th>
+                            <th style="width: 18%;">ChÃ¡Â»Â©c vÃ¡Â»Â¥</th>
+                            <th style="width: 18%;">PhÃƒÂ²ng ban</th>
+                            <th style="width: 14%;">Email</th>
+                            <th style="width: 8%;">SÃ¡Â»Â­a</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <?php if (count($list_rows) === 0): ?>
+                            <tr>
+                                <td colspan="7" class="empty-state">ChÃ†Â°a cÃƒÂ³ dÃ¡Â»Â¯ liÃ¡Â»â€¡u phÃƒÂ¹ hÃ¡Â»Â£p.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($list_rows as $idx => $row): ?>
+                                <?php
+                                $row_macanbo = (string)($row['macanbo'] ?? '');
+                                $row_hoten = (string)($row['hoten'] ?? '');
+                                $row_mota = (string)($row['mota'] ?? '');
+                                $row_tenphong = (string)($row['tenphong'] ?? '');
+                                $row_email = (string)($row['email'] ?? '');
+                                $stt = $offset + $idx + 1;
+                                ?>
+                                <tr>
+                                    <td><?php echo number_format($stt); ?></td>
+                                    <td><?php echo user_system_text($row_macanbo); ?></td>
+                                    <td title="<?php echo user_system_text($row_hoten); ?>"><?php echo user_system_text($row_hoten); ?></td>
+                                    <td title="<?php echo user_system_text($row_mota); ?>"><?php echo user_system_text($row_mota); ?></td>
+                                    <td title="<?php echo user_system_text($row_tenphong); ?>"><?php echo user_system_text($row_tenphong); ?></td>
+                                    <td><?php echo user_system_text($row_email); ?></td>
+                                    <td>
+                                        <a class="row-link" href="<?php echo $index_url . '?' . htmlspecialchars(http_build_query(array_merge($canonical_params, ['macanbo' => $row_macanbo])), ENT_QUOTES, 'UTF-8'); ?>">SÃ¡Â»Â­a</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if ($total_pages > 1): ?>
+                <div class="pagination">
+                    <?php
+                    $base_query = $canonical_params;
+                    if ($page > 1):
+                        $base_query['page'] = $page - 1;
+                    ?>
+                        <a class="nav" href="<?php echo $index_url; ?>?<?php echo htmlspecialchars(http_build_query($base_query), ENT_QUOTES, 'UTF-8'); ?>">&lsaquo;</a>
+                    <?php else: ?>
+                        <span class="nav">&lsaquo;</span>
+                    <?php endif; ?>
+
+                    <?php
+                    for ($i = 1; $i <= $total_pages; $i++):
+                        $base_query['page'] = $i;
+                        if ($i === $page):
+                    ?>
+                        <span class="current"><?php echo $i; ?></span>
+                    <?php else: ?>
+                        <a href="<?php echo $index_url; ?>?<?php echo htmlspecialchars(http_build_query($base_query), ENT_QUOTES, 'UTF-8'); ?>"><?php echo $i; ?></a>
+                    <?php
+                        endif;
+                    endfor;
+                    if ($page < $total_pages):
+                        $base_query['page'] = $page + 1;
+                    ?>
+                        <a class="nav" href="<?php echo $index_url; ?>?<?php echo htmlspecialchars(http_build_query($base_query), ENT_QUOTES, 'UTF-8'); ?>">&rsaquo;</a>
+                    <?php else: ?>
+                        <span class="nav">&rsaquo;</span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <aside class="panel panel-form">
+            <div class="panel-head panel-head-tight">
+                <div>
+                    <h2>Chi tiÃ¡ÂºÂ¿t cÃƒÂ¡n bÃ¡Â»â„¢</h2>
+                    <p>NhÃ¡ÂºÂ­p dÃ¡Â»Â¯ liÃ¡Â»â€¡u rÃ¡Â»â€œi bÃ¡ÂºÂ¥m lÃ†Â°u. HÃ¡Â»â€¡ thÃ¡Â»â€˜ng sÃ¡ÂºÂ½ hÃ¡Â»Âi xÃƒÂ¡c nhÃ¡ÂºÂ­n trÃ†Â°Ã¡Â»â€ºc khi ghi.</p>
+                </div>
+            </div>
+
+            <form method="post" action="<?php echo $index_url; ?>" class="user-form" id="userForm">
+                <input type="hidden" name="action" value="save">
+                <input type="hidden" name="confirm_write" id="confirmWrite" value="0">
+                <input type="hidden" name="original_macanbo" id="originalMacanbo" value="<?php echo user_system_text((string)$current_user['macanbo']); ?>">
+                <input type="hidden" name="return_keyword" value="<?php echo user_system_text($keyword); ?>">
+
+                <div class="form-grid">
+                    <label>
+                        <span>MÃƒÂ£ cÃƒÂ¡n bÃ¡Â»â„¢</span>
+                        <input type="text" name="macanbo" id="macanbo" value="<?php echo user_system_text((string)$current_user['macanbo']); ?>" placeholder="VD: CB001">
+                    </label>
+                    <label>
+                        <span>HÃ¡Â»Â tÃƒÂªn</span>
+                        <input type="text" name="hoten" id="hoten" value="<?php echo user_system_text((string)$current_user['hoten']); ?>" placeholder="NguyÃ¡Â»â€¦n VÃ„Æ’n A">
+                    </label>
+                    <label>
+                        <span>MÃƒÂ£ phÃƒÂ²ng</span>
+                        <input type="text" name="maphong" id="maphong" value="<?php echo user_system_text((string)$current_user['maphong']); ?>" placeholder="VD: P001">
+                    </label>
+                    <label>
+                        <span>MÃƒÂ£ chÃ¡Â»Â©c vÃ¡Â»Â¥</span>
+                        <input type="text" name="machucvu" id="machucvu" value="<?php echo user_system_text((string)$current_user['machucvu']); ?>" placeholder="VD: CV01">
+                    </label>
+                    <label>
+                        <span>M&#7853;t kh&#7849;u</span>
+                        <input type="password" name="password" id="password" placeholder="&#272;&#7875; tr&#7889;ng n&#7871;u kh&#244;ng &#273;&#7893;i" autocomplete="new-password">
+                    </label>
+                    <label class="span-2">
+                        <span>Email</span>
+                        <input type="email" name="email" id="email" value="<?php echo user_system_text((string)$current_user['email']); ?>" placeholder="user@example.com">
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="action-btn action-btn-primary" id="saveBtn"><?php echo ((string)$current_user['macanbo'] !== '') ? 'CÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t' : 'LÃ†Â°u'; ?></button>
+                    <button type="button" class="action-btn" id="resetBtn">Reset</button>
+                </div>
+            </form>
+        </aside>
+    </section>
+
+    <section class="panel panel-footer">
+        <div class="footer-note">
+            <strong>Ghi chÃƒÂº:</strong>
+            MÃƒÂ n nÃƒÂ y Ã„â€˜ang Ã„â€˜Ã¡Â»Âc/ghi trÃƒÂªn database `qlcv` cÃ¡Â»Â§a host `10.64.0.251`, nhÃ†Â°ng chÃ¡Â»â€° ghi sau khi bÃ¡ÂºÂ¡n xÃƒÂ¡c nhÃ¡ÂºÂ­n.
+        </div>
+        <div class="footer-tags">
+            <span>List</span>
+            <span>Form</span>
+            <span>Confirm write</span>
+        </div>
+    </section>
+</div>
+<script>
+(function () {
+    var form = document.getElementById('userForm');
+    var confirmWrite = document.getElementById('confirmWrite');
+    var saveBtn = document.getElementById('saveBtn');
+    var resetBtn = document.getElementById('resetBtn');
+    var reloadBtn = document.getElementById('reloadListBtn');
+    var quickFilter = document.getElementById('quickFilter');
+    var tableBody = document.getElementById('userTableBody');
+    var passwordInput = document.getElementById('password');
+
+    function trimValue(value) {
+        return String(value || '').trim();
+    }
+
+    function isUpdateMode() {
+        var original = document.getElementById('originalMacanbo');
+        return trimValue(original ? original.value : '') !== '';
+    }
+
+    function promptSave() {
+        var action = isUpdateMode() ? 'cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t' : 'thÃƒÂªm mÃ¡Â»â€ºi';
+        return window.confirm('BÃ¡ÂºÂ¡n cÃƒÂ³ xÃƒÂ¡c nhÃ¡ÂºÂ­n muÃ¡Â»â€˜n ' + action + ' user nÃƒÂ y khÃƒÂ´ng?');
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            if (!promptSave()) {
+                event.preventDefault();
+                return;
+            }
+            if (confirmWrite) {
+                confirmWrite.value = '1';
+            }
+            if (saveBtn) {
+                saveBtn.disabled = true;
+            }
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            window.location.href = '<?php echo $index_url; ?>';
+        });
+    }
+
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', function () {
+            window.location.reload();
+        });
+    }
+
+    if (quickFilter && tableBody) {
+        quickFilter.addEventListener('input', function () {
+            var query = trimValue(quickFilter.value).toLowerCase();
+            var rows = tableBody.querySelectorAll('tr');
+            var visibleCount = 0;
+            rows.forEach(function (row) {
+                if (row.querySelector('.empty-state')) {
+                    row.style.display = '';
+                    return;
+                }
+                var text = (row.textContent || '').toLowerCase();
+                var show = query === '' || text.indexOf(query) !== -1;
+                row.style.display = show ? '' : 'none';
+                if (show) {
+                    visibleCount += 1;
+                }
+            });
+            var existingEmpty = tableBody.querySelector('.quick-empty-row');
+            if (visibleCount === 0 && rows.length > 0) {
+                if (!existingEmpty) {
+                    existingEmpty = document.createElement('tr');
+                    existingEmpty.className = 'quick-empty-row';
+                    existingEmpty.innerHTML = '<td colspan="7" class="empty-state">KhÃƒÂ´ng cÃƒÂ³ dÃ¡Â»Â¯ liÃ¡Â»â€¡u phÃƒÂ¹ hÃ¡Â»Â£p vÃ¡Â»â€ºi bÃ¡Â»â„¢ lÃ¡Â»Âc nhanh.</td>';
+                    tableBody.appendChild(existingEmpty);
+                }
+            } else if (existingEmpty) {
+                existingEmpty.remove();
+            }
+        });
+    }
+})();
+</script>
+</body>
+</html>
+<?php
+if (isset($conn) && $conn instanceof mysqli) {
+    $conn->close();
+}
+?>
+
+
