@@ -70,21 +70,21 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## DB
 
 ### Task
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
-- Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: CONNECT_DB.PHP
+- Mục tiêu: xử lý lỗi: Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
+- Yêu cầu chi tiết: khắc phục lỗi Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
+- Không được đụng vào: các file không liên quan
+- Kết quả mong muốn: có thể kết nối được
 - Cách kiểm tra:
 - Ghi chú thêm:
 
 ## DGX
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: DGX.PHP, dgx_report_layout
 - Mục tiêu: KHẮC PHỤC LỖI TIẾNG VIỆT, định dạng số liệu khi xuất ra báo cáo
 - Yêu cầu chi tiết: sửa lỗi tiếng việt hiển trị trên web, khi xuất ra dữ liệu các số liệu nên định dạng: 1.000.000 đôi với giá trị triền tệ và 1,000 đối với các số liệu khác

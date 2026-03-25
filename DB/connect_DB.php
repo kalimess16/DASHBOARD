@@ -1,7 +1,8 @@
-﻿<?php
+<?php
 
 const DASHBOARD_PROTECTED_DB_HOSTS = ['10.64.0.251', '10.64.0.56'];
 $dashboard_last_mysql_connect_error = '';
+$dashboard_last_oracle_connect_error = '';
 
 function env_or_default(string $key, string $default): string
 {
@@ -72,6 +73,11 @@ function connect_mysql_without_db(string $host, string $user, string $pass, int 
 function db_last_mysql_connect_error(): string
 {
     return (string)($GLOBALS['dashboard_last_mysql_connect_error'] ?? '');
+}
+
+function db_last_oracle_connect_error(): string
+{
+    return (string)($GLOBALS['dashboard_last_oracle_connect_error'] ?? '');
 }
 
 function db_is_protected_host(string $host): bool
@@ -159,18 +165,45 @@ function db_oci_parse($conn, string $sql)
 
 function connect_oracle(string $user, string $pass, string $host, int $port, string $serviceName)
 {
+    $GLOBALS['dashboard_last_oracle_connect_error'] = '';
     if (!function_exists('oci_connect')) {
+        $GLOBALS['dashboard_last_oracle_connect_error'] = 'OCI8 extension is not available.';
         return null;
     }
-    $dsn = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SERVICE_NAME={$serviceName})))";
-    $conn = @oci_connect($user, $pass, $dsn, 'AL32UTF8');
-    if ($conn === false) {
-        return null;
+
+    $serviceName = trim($serviceName);
+    $dsnCandidates = [
+        "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SERVICE_NAME={$serviceName})))",
+        "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME={$serviceName})))",
+        "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SID={$serviceName})))",
+        "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={$host})(PORT={$port}))(CONNECT_DATA=(SERVER=SHARED)(SID={$serviceName})))",
+    ];
+
+    $lastError = 'Oracle connect failed.';
+    foreach ($dsnCandidates as $dsn) {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $conn = @oci_connect($user, $pass, $dsn, 'AL32UTF8');
+            if ($conn !== false) {
+                if (function_exists('oci_set_call_timeout')) {
+                    @oci_set_call_timeout($conn, 25000); // 25s per call
+                }
+                $GLOBALS['dashboard_last_oracle_connect_error'] = '';
+                return $conn;
+            }
+
+            $error = oci_error();
+            $lastError = trim((string)($error['message'] ?? 'Oracle connect failed.'));
+
+            if (stripos($lastError, 'ORA-12516') === false && stripos($lastError, 'ORA-12520') === false) {
+                break;
+            }
+
+            usleep(250000);
+        }
     }
-    if (function_exists('oci_set_call_timeout')) {
-        @oci_set_call_timeout($conn, 25000); // 8s per call
-    }
-    return $conn;
+
+    $GLOBALS['dashboard_last_oracle_connect_error'] = $lastError;
+    return null;
 }
 
 $sourceHost = env_or_default('DASHBOARD_SOURCE_DB_HOST', '10.64.0.251');
@@ -227,5 +260,6 @@ if (db_is_host_reachable($oracleHost, $oraclePort, 2)) {
     error_log('Dashboard DB warning: Oracle host unreachable at ' . $oracleHost . ':' . $oraclePort . ' (skipped connect).');
 }
 if ($oracle_conn === null) {
-    error_log('Dashboard DB warning: Oracle connect failed or OCI8 extension missing.');
+    $oracleError = db_last_oracle_connect_error();
+    error_log('Dashboard DB warning: Oracle connect failed. ' . ($oracleError !== '' ? $oracleError : 'OCI8 extension missing or listener rejected the connection.'));
 }
