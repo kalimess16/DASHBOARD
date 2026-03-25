@@ -70,8 +70,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## DB
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: CONNECT_DB.PHP
 - Mục tiêu: xử lý lỗi: Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
 - Yêu cầu chi tiết: khắc phục lỗi Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
@@ -109,15 +109,15 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## USER-SYSTEM
 
 ### Task
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
-- Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
-- Ghi chú thêm:
+- Trạng thái: TODO
+- Ưu tiên: Cao
+- File liên quan: user_system_sql, user_system.php, layout_insert.php, user_system.md
+- Mục tiêu: thêm điều kiện về tiêu chí giaoviec
+- Yêu cầu chi tiết: Phần giao việc nếu chọn "N" thì insert hoặc updte thì set giaoviec = null
+- Không được đụng vào: các thư mục khác
+- Kết quả mong muốn: có thể load, inser, update được các thông tin chi tiết cán bộ
+- Cách kiểm tra: 
+- Ghi chú thêm: 
 
 ## VB_IOT
 

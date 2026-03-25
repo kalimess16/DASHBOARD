@@ -56,6 +56,55 @@ function normalize_text(string $value): string
     return trim(preg_replace('/\s+/', ' ', $value) ?? $value);
 }
 
+function normalize_giaoviec_value(string $value): string
+{
+    $normalized = strtoupper(trim($value));
+    if ($normalized === '' || $normalized === 'N') {
+        return 'N';
+    }
+
+    return 'Y';
+}
+
+function user_system_resolve_return_url(string $value, string $fallback): string
+{
+    $value = trim($value);
+    if ($value === '' || preg_match('/[\r\n]/', $value)) {
+        return $fallback;
+    }
+
+    $parts = parse_url($value);
+    if ($parts === false || isset($parts['scheme']) || isset($parts['host'])) {
+        return $fallback;
+    }
+
+    $path = (string)($parts['path'] ?? '');
+    if ($path === '' || strpos($path, '/dashboard/USER-SYSTEM/') !== 0) {
+        return $fallback;
+    }
+
+    return $path;
+}
+
+function user_system_redirect(string $baseUrl, array $params = []): void
+{
+    $queryParams = [];
+    foreach ($params as $key => $value) {
+        if ($value === '' || $value === null) {
+            continue;
+        }
+        $queryParams[$key] = $value;
+    }
+
+    $location = $baseUrl;
+    if (!empty($queryParams)) {
+        $location .= '?' . http_build_query($queryParams);
+    }
+
+    header('Location: ' . $location);
+    exit;
+}
+
 function user_system_row_matches(array $row, string $keyword): bool
 {
     $keyword = trim($keyword);
@@ -193,6 +242,7 @@ $current_user = [
     'email' => '',
     'maphong' => '',
     'machucvu' => '',
+    'giaoviec' => 'N',
     'password_hash' => '',
 ];
 
@@ -226,8 +276,9 @@ if (isset($_GET['api']) && $_GET['api'] === 'detail') {
     $detail_err = '';
     $detail_row = db_fetch_one_assoc($conn, user_system_detail_sql(), [$api_code], $detail_err);
     if ($detail_row === null) {
-        json_exit(['ok' => false, 'message' => $detail_err !== '' ? $detail_err : 'Không đọc được thông tin user.']);
+        json_exit(['ok' => false, 'message' => $detail_err !== '' ? $detail_err : 'Khong doc duoc thong tin user.']);
     }
+    $detail_row['giaoviec'] = normalize_giaoviec_value((string)($detail_row['giaoviec'] ?? ''));
     json_exit(['ok' => true, 'row' => $detail_row]);
 }
 
@@ -264,16 +315,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     $confirm_write = trim((string)($_POST['confirm_write'] ?? '0'));
     $original_macanbo = normalize_text((string)($_POST['original_macanbo'] ?? ''));
     $posted_macanbo = normalize_text((string)($_POST['macanbo'] ?? ''));
+    $return_url = user_system_resolve_return_url((string)($_POST['return_url'] ?? ''), $index_url);
+    $return_keyword = normalize_text((string)($_POST['return_keyword'] ?? ''));
+    $return_page = max(1, (int)($_POST['return_page'] ?? 1));
     $is_update = $original_macanbo !== '';
     $action_text = $is_update ? 'cập nhật' : 'thêm mới';
 
     if ($confirm_write !== '1') {
-        user_system_flash_set('Bạn có xác nhận muốn ' . $action_text . ' user này không? Hãy xác nhận trên giao diện.', 'error');
-        header('Location: ' . $index_url . '?' . http_build_query([
+        user_system_flash_set('Ban co xac nhan muon ' . $action_text . ' user nay khong? Hay xac nhan tren giao dien.', 'error');
+        user_system_redirect($return_url, [
             'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
-            'keyword' => $keyword,
-        ]));
-        exit;
+            'keyword' => $return_keyword,
+            'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
+        ]);
     }
 
     $hoten = normalize_text((string)($_POST['hoten'] ?? ''));
@@ -281,33 +335,49 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     $maphong = normalize_text((string)($_POST['maphong'] ?? ''));
     $machucvu = normalize_text((string)($_POST['machucvu'] ?? ''));
     $email = normalize_text((string)($_POST['email'] ?? ''));
+    $giaoviec = normalize_giaoviec_value((string)($_POST['giaoviec'] ?? 'N'));
 
     if ($posted_macanbo === '' || $hoten === '') {
-        user_system_flash_set('Vui lòng nhập mã cán bộ và họ tên.', 'error');
-        header('Location: ' . $index_url . '?' . http_build_query([
+        user_system_flash_set('Vui long nhap ma can bo va ho ten.', 'error');
+        user_system_redirect($return_url, [
             'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
-            'keyword' => $keyword,
-        ]));
-        exit;
+            'hoten' => !$is_update && $return_url !== $index_url ? $hoten : '',
+            'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
+            'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
+            'email' => !$is_update && $return_url !== $index_url ? $email : '',
+            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
+            'keyword' => $return_keyword,
+            'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
+        ]);
     }
 
 
     if ($maphong === '' || !user_system_option_exists($department_rows, 'department_code', $maphong)) {
-        user_system_flash_set('Vui lòng chọn phòng ban hợp lệ.', 'error');
-        header('Location: ' . $index_url . '?' . http_build_query([
+        user_system_flash_set('Vui long chon phong ban hop le.', 'error');
+        user_system_redirect($return_url, [
             'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
-            'keyword' => $keyword,
-        ]));
-        exit;
+            'hoten' => !$is_update && $return_url !== $index_url ? $hoten : '',
+            'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
+            'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
+            'email' => !$is_update && $return_url !== $index_url ? $email : '',
+            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
+            'keyword' => $return_keyword,
+            'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
+        ]);
     }
 
     if ($machucvu === '' || !user_system_option_exists($position_rows, 'position_code', $machucvu)) {
-        user_system_flash_set('Vui lòng chọn chức vụ hợp lệ.', 'error');
-        header('Location: ' . $index_url . '?' . http_build_query([
+        user_system_flash_set('Vui long chon chuc vu hop le.', 'error');
+        user_system_redirect($return_url, [
             'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
-            'keyword' => $keyword,
-        ]));
-        exit;
+            'hoten' => !$is_update && $return_url !== $index_url ? $hoten : '',
+            'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
+            'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
+            'email' => !$is_update && $return_url !== $index_url ? $email : '',
+            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
+            'keyword' => $return_keyword,
+            'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
+        ]);
     }
 
     $write_err = '';
@@ -321,7 +391,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được insert SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('ssssss', $posted_macanbo, $hoten, $hashps, $maphong, $machucvu, $email);
+                $bind_ok = $stmt->bind_param('sssssss', $posted_macanbo, $hoten, $hashps, $maphong, $machucvu, $email, $giaoviec);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không insert được user.';
                 }
@@ -336,7 +406,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được update SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('ssssss', $hoten, $hashps, $maphong, $machucvu, $email, $original_macanbo);
+                $bind_ok = $stmt->bind_param('sssssss', $hoten, $hashps, $maphong, $machucvu, $email, $giaoviec, $original_macanbo);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không update được user.';
                 }
@@ -348,7 +418,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được update SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('sssss', $hoten, $maphong, $machucvu, $email, $original_macanbo);
+                $bind_ok = $stmt->bind_param('ssssss', $hoten, $maphong, $machucvu, $email, $giaoviec, $original_macanbo);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không update được user.';
                 }
@@ -358,16 +428,26 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     }
 
     if ($write_err !== '') {
-        user_system_flash_set('Lưu thất bại: ' . $write_err, 'error');
+        user_system_flash_set('Luu that bai: ' . $write_err, 'error');
     } else {
-        user_system_flash_set($is_update ? 'Đã cập nhật user thành công.' : 'Đã thêm mới user thành công.', 'info');
+        user_system_flash_set($is_update ? 'Da cap nhat user thanh cong.' : 'Da them moi user thanh cong.', 'info');
     }
 
-    header('Location: ' . $index_url . '?' . http_build_query([
-        'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
-        'keyword' => $keyword,
-    ]));
-    exit;
+    $redirect_params = [
+        'macanbo' => $return_url === $index_url ? ($is_update ? $original_macanbo : $posted_macanbo) : '',
+        'keyword' => $return_url === $index_url ? $return_keyword : '',
+        'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
+    ];
+    if ($write_err !== '' && !$is_update && $return_url !== $index_url) {
+        $redirect_params['macanbo'] = $posted_macanbo;
+        $redirect_params['hoten'] = $hoten;
+        $redirect_params['maphong'] = $maphong;
+        $redirect_params['machucvu'] = $machucvu;
+        $redirect_params['email'] = $email;
+        $redirect_params['giaoviec'] = $giaoviec;
+    }
+
+    user_system_redirect($return_url, $redirect_params);
 }
 
 $list_err = '';
@@ -425,6 +505,7 @@ if ($macanbo !== '') {
         $current_user = array_merge($current_user, $detail_row);
     }
 }
+$current_user['giaoviec'] = normalize_giaoviec_value((string)($current_user['giaoviec'] ?? ''));
 
 $canonical_params = [];
 if ($keyword !== '') {
@@ -612,6 +693,8 @@ if ($page > 1) {
                 <input type="hidden" name="confirm_write" id="confirmWrite" value="0">
                 <input type="hidden" name="original_macanbo" id="originalMacanbo" value="<?php echo user_system_text((string)$current_user['macanbo']); ?>">
                 <input type="hidden" name="return_keyword" value="<?php echo user_system_text($keyword); ?>">
+                <input type="hidden" name="return_page" value="<?php echo (int)$page; ?>">
+                <input type="hidden" name="return_url" value="<?php echo user_system_text($index_url); ?>">
 
                 <div class="form-grid">
                     <label>
@@ -666,6 +749,13 @@ if ($page > 1) {
                                     <?php echo user_system_text((string)$current_user['machucvu']); ?>
                                 </option>
                             <?php endif; ?>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Giao viec</span>
+                        <select name="giaoviec" id="giaoviec">
+                            <option value="N" <?php echo (string)$current_user['giaoviec'] === 'N' ? 'selected' : ''; ?>>N</option>
+                            <option value="Y" <?php echo (string)$current_user['giaoviec'] === 'Y' ? 'selected' : ''; ?>>Y</option>
                         </select>
                     </label>
                     <label>

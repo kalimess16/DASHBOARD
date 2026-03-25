@@ -9,7 +9,8 @@ function user_system_list_sql(): string
             CV.MOTA AS mota,
             p.tenphong,
             u.email,
-            p.MAINTL AS mapos
+            u.MAPHONG AS maphong,
+            u.MACHUCVU AS machucvu
         FROM canbo u
         LEFT JOIN phongban p ON p.MAPHONG = u.MAPHONG
         LEFT JOIN CHUCVU CV ON CV.MACV = u.MACHUCVU
@@ -36,7 +37,8 @@ function user_system_detail_sql(): string
             p.tenphong,
             u.email,
             u.MAPHONG AS maphong,
-            u.MACHUCVU AS machucvu
+            u.MACHUCVU AS machucvu,
+            u.giaoviec AS giaoviec
         FROM canbo u
         INNER JOIN phongban p ON u.MAPHONG = p.MAPHONG
         LEFT JOIN CHUCVU CV ON CV.MACV = u.MACHUCVU
@@ -56,8 +58,9 @@ function user_system_insert_sql(): string
             MAPHONG,
             MACHUCVU,
             email,
-            menudp
-        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?,'ALL')
+            menudp,
+            giaoviec
+        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?,'ALL',NULLIF(?, 'N'))
     ";
 }
 
@@ -71,7 +74,8 @@ function user_system_update_sql(bool $include_password = false): string
                 hashps = PASSWORD(?),
                 MAPHONG = ?,
                 MACHUCVU = ?,
-                email = ?
+                email = ?,
+                giaoviec = NULLIF(?, 'N')
             WHERE macanbo = ?
         ";
     }
@@ -82,7 +86,8 @@ function user_system_update_sql(bool $include_password = false): string
             hoten = ?,
             MAPHONG = ?,
             MACHUCVU = ?,
-            email = ?
+            email = ?,
+            giaoviec = NULLIF(?, 'N')
         WHERE macanbo = ?
     ";
 }
@@ -119,4 +124,3 @@ function user_system_posotion_sql(): string
         ORDER BY cv.MOTA ASC
     ";
 }
-
