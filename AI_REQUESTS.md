@@ -57,15 +57,15 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## CODE-ORCALE_SQL
 
 ### Task
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
-- Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
-- Ghi chú thêm:
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: CODE.SQL
+- Mục tiêu: KHẮC PHỤC LỖI tiếng việt
+- Yêu cầu chi tiết: khắc phục các lỗi tiếng việt đang bị mã hóa
+- Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
+- Kết quả mong muốn: xử lý hết lỗi tiếng việt
+- Cách kiểm tra: KHÔNG
+- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL THÔI và sinh ra file md. trong thư mục nhắc nhở
 
 ## DB
 
@@ -109,8 +109,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## USER-SYSTEM
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: Cao
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: user_system_sql, user_system.php, layout_insert.php, user_system.md
 - Mục tiêu: thêm điều kiện về tiêu chí giaoviec
 - Yêu cầu chi tiết: Phần giao việc nếu chọn "N" thì insert hoặc updte thì set giaoviec = null
