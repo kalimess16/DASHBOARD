@@ -9,7 +9,7 @@
         <h3 id="reportDialogTitle" class="fixed-drag-handle">BÁO CÁO THEO DGX</h3>
         <div class="fixed-filters report-filters">
             <input id="reportDgxFilter" class="fixed-control" type="text" value="<?php echo htmlspecialchars($report_dgx_text, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Nhập mã DGX, cách nhau bằng ';'">
-            <button type="button" id="reportFilterBtn" class="fixed-action">Xem Báo Cáo</button>
+            <button type="button" id="reportFilterBtn" class="fixed-action">Xem báo cáo</button>
             <button type="button" id="reportExportBtn" class="fixed-action fixed-action-secondary">Xuất Excel</button>
         </div>
         <div class="fixed-warning" id="reportWarn" hidden></div>
@@ -81,13 +81,23 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
     }
+    var countFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+    var moneyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
 
-    function numberText(value) {
+    function formatCount(value) {
         var num = Number(value || 0);
         if (!Number.isFinite(num)) {
             return '';
         }
-        return num.toLocaleString('vi-VN');
+        return countFormatter.format(num);
+    }
+
+    function formatMoney(value) {
+        var num = Number(value || 0);
+        if (!Number.isFinite(num)) {
+            return '';
+        }
+        return moneyFormatter.format(num);
     }
 
     function renderRows(rows) {
@@ -101,14 +111,14 @@
                 + '<td>' + esc(row.MAPOS || '') + '</td>'
                 + '<td title="' + esc(row.TEN_GDV || '') + '">' + esc(row.TEN_GDV || '') + '</td>'
                 + '<td title="' + esc(row.DIEM_GDX || '') + '">' + esc(row.DIEM_GDX || '') + '</td>'
-                + '<td>' + esc(numberText(row.TO_TN)) + '</td>'
-                + '<td>' + esc(numberText(row.SO_KU)) + '</td>'
-                + '<td>' + esc(numberText(row.KH_GN)) + '</td>'
-                + '<td>' + esc(numberText(row.SOTIEN_GN)) + '</td>'
-                + '<td>' + esc(numberText(row.KH_TNCN)) + '</td>'
-                + '<td>' + esc(numberText(row.KH_TKCKH)) + '</td>'
-                + '<td>' + esc(numberText(row.GUITK)) + '</td>'
-                + '<td>' + esc(numberText(row.RUTTK)) + '</td>'
+                + '<td>' + esc(formatCount(row.TO_TN)) + '</td>'
+                + '<td>' + esc(formatCount(row.SO_KU)) + '</td>'
+                + '<td>' + esc(formatCount(row.KH_GN)) + '</td>'
+                + '<td>' + esc(formatMoney(row.SOTIEN_GN)) + '</td>'
+                + '<td>' + esc(formatCount(row.KH_TNCN)) + '</td>'
+                + '<td>' + esc(formatCount(row.KH_TKCKH)) + '</td>'
+                + '<td>' + esc(formatMoney(row.GUITK)) + '</td>'
+                + '<td>' + esc(formatMoney(row.RUTTK)) + '</td>'
                 + '</tr>';
         });
         tbody.innerHTML = html;
@@ -333,5 +343,3 @@
     });
 })();
 </script>
-
-

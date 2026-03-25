@@ -13,6 +13,7 @@ session_set_cookie_params([
     'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
 ]);
 session_start();
+header('Content-Type: text/html; charset=UTF-8');
 require_once __DIR__ . '/../DB/connect_DB.php';
 require_once __DIR__ . '/dgx_sql.php';
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -41,6 +42,14 @@ function normalize_dgx_codes_input(string $value): string
         if ($code !== '') $codes[$code] = true;
     }
     return implode(';', array_keys($codes));
+}
+
+function normalize_excel_number($value): float
+{
+    if ($value === null || $value === '') return 0.0;
+    if (is_numeric($value)) return (float)$value;
+    $normalized = str_replace([',', ' '], '', (string)$value);
+    return is_numeric($normalized) ? (float)$normalized : 0.0;
 }
 
 function is_fast_dgx_keyword(string $value): bool
@@ -120,7 +129,7 @@ $end_row = $offset + $per_page;
 if (isset($_GET['api']) && $_GET['api'] === 'fixed_points') {
     header('Content-Type: application/json; charset=UTF-8');
     if (!isset($oracle_conn) || $oracle_conn === null) {
-        echo json_encode(['ok' => false, 'message' => 'Chua ket noi duoc Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => 'Chưa kết nối được Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $api_mode = trim((string)($_GET['fixed_mode'] ?? 'day'));
@@ -155,7 +164,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'fixed_points') {
         'fixed_keyword_like' => '%' . $api_fixed_keyword . '%',
     ], $api_err);
     if ($fixed_rows === null) {
-        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Loi truy van Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     echo json_encode(['ok' => true, 'mode' => $api_mode, 'date' => $ngay_gdx_bind, 'total' => count($fixed_rows), 'rows' => $fixed_rows], JSON_UNESCAPED_UNICODE);
@@ -165,13 +174,13 @@ if (isset($_GET['api']) && $_GET['api'] === 'fixed_points') {
 if (isset($_GET['api']) && $_GET['api'] === 'fixed_dates') {
     header('Content-Type: application/json; charset=UTF-8');
     if (!isset($oracle_conn) || $oracle_conn === null) {
-        echo json_encode(['ok' => false, 'message' => 'Chua ket noi duoc Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => 'Chưa kết nối được Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $api_err = '';
     $date_rows = oci_run_query($oracle_conn, dgx_fixed_dates_sql(), [], $api_err);
     if ($date_rows === null) {
-        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Loi truy van Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     echo json_encode(['ok' => true, 'rows' => $date_rows], JSON_UNESCAPED_UNICODE);
@@ -181,7 +190,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'fixed_dates') {
 if (isset($_GET['api']) && $_GET['api'] === 'report_list') {
     header('Content-Type: application/json; charset=UTF-8');
     if (!isset($oracle_conn) || $oracle_conn === null) {
-        echo json_encode(['ok' => false, 'message' => 'Chua ket noi duoc Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => 'Chưa kết nối được Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $api_report_date = normalize_date_input((string)($_GET['report_date'] ?? '')) ?: date('Y-m-d');
@@ -194,7 +203,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_list') {
         $api_err = '';
         $missing_codes = get_missing_dgx_codes($oracle_conn, $report_date_ddmmyyyy, $validate_codes_csv, $api_err);
         if ($missing_codes === null) {
-            echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Loi kiem tra ma diem GDX.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Lỗi kiểm tra mã điểm GDX.', 'rows' => []], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
@@ -204,7 +213,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_list') {
         'P_MADGD' => $api_report_dgx !== '' ? $api_report_dgx : null,
     ], $api_err);
     if ($rows === null) {
-        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Loi truy van Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.', 'rows' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
     echo json_encode([
@@ -223,7 +232,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_excel') {
     if (!isset($oracle_conn) || $oracle_conn === null) {
         http_response_code(500);
         header('Content-Type: text/plain; charset=UTF-8');
-        echo 'Chua ket noi duoc Oracle.';
+        echo 'Chưa kết nối được Oracle.';
         exit;
     }
     $api_report_date = normalize_date_input((string)($_GET['report_date'] ?? '')) ?: date('Y-m-d');
@@ -237,7 +246,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_excel') {
         if ($missing_codes === null) {
             http_response_code(500);
             header('Content-Type: text/plain; charset=UTF-8');
-            echo $api_err !== '' ? $api_err : 'Loi kiem tra ma diem GDX.';
+            echo $api_err !== '' ? $api_err : 'Lỗi kiểm tra mã điểm GDX.';
             exit;
         }
     }
@@ -249,30 +258,69 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_excel') {
     if ($rows === null) {
         http_response_code(500);
         header('Content-Type: text/plain; charset=UTF-8');
-        echo $api_err !== '' ? $api_err : 'Loi truy van Oracle.';
+        echo $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.';
         exit;
     }
     $filename = 'bao_cao_giao_dich_xa_' . date('Ymd', strtotime($api_report_date)) . '.xlsx';
     $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('BaoCaoDGX');
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(12);
+    $lastColumn = 'K';
+    $titleRow = 1;
+    $headerRow = 2;
+    $rowIndex = 3;
+    $reportTitle = 'BÁO CÁO DGX CỦA TỪNG GDV NGÀY ' . $report_date_ddmmyyyy;
+
+    $sheet->mergeCells('A' . $titleRow . ':' . $lastColumn . $titleRow);
+    $sheet->setCellValue('A' . $titleRow, $reportTitle);
+    $sheet->getStyle('A' . $titleRow)->getFont()->setName('Times New Roman')->setBold(true)->setSize(16);
+    $sheet->getStyle('A' . $titleRow . ':' . $lastColumn . $titleRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet->getHeaderFooter()->setOddHeader('&C' . $reportTitle);
+
     $headers = ['MÃ POS', 'TÊN GDV', 'ĐIỂM GDX', 'TỔ TN', 'SỐ KU', 'KH GN', 'SỐ TIỀN GN', 'KH TNCN', 'KH TKCKH', 'GỬI TK', 'RÚT TK'];
-    foreach ($headers as $i => $header) $sheet->setCellValueByColumnAndRow($i + 1, 1, $header);
-    $rowIndex = 2;
+    foreach ($headers as $i => $header) {
+        $sheet->setCellValueByColumnAndRow($i + 1, $headerRow, $header);
+    }
+    $sheet->getStyle('A' . $headerRow . ':' . $lastColumn . $headerRow)->getFont()->setName('Times New Roman')->setBold(true);
+    $sheet->getStyle('A' . $headerRow . ':' . $lastColumn . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet->freezePane('A' . $rowIndex);
+
+    foreach (range('A', $lastColumn) as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+    $dataStartRow = $rowIndex;
     foreach ($rows as $row) {
         $sheet->setCellValueByColumnAndRow(1, $rowIndex, (string)($row['MAPOS'] ?? ''));
         $sheet->setCellValueByColumnAndRow(2, $rowIndex, (string)($row['TEN_GDV'] ?? ''));
         $sheet->setCellValueByColumnAndRow(3, $rowIndex, (string)($row['DIEM_GDX'] ?? ''));
-        $sheet->setCellValueByColumnAndRow(4, $rowIndex, (float)($row['TO_TN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(5, $rowIndex, (float)($row['SO_KU'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(6, $rowIndex, (float)($row['KH_GN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(7, $rowIndex, (float)($row['SOTIEN_GN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(8, $rowIndex, (float)($row['KH_TNCN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(9, $rowIndex, (float)($row['KH_TKCKH'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(10, $rowIndex, (float)($row['GUITK'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(11, $rowIndex, (float)($row['RUTTK'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(4, $rowIndex, normalize_excel_number($row['TO_TN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(5, $rowIndex, normalize_excel_number($row['SO_KU'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(6, $rowIndex, normalize_excel_number($row['KH_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(7, $rowIndex, normalize_excel_number($row['SOTIEN_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(8, $rowIndex, normalize_excel_number($row['KH_TNCN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(9, $rowIndex, normalize_excel_number($row['KH_TKCKH'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(10, $rowIndex, normalize_excel_number($row['GUITK'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(11, $rowIndex, normalize_excel_number($row['RUTTK'] ?? 0));
         $rowIndex++;
     }
+    $lastDataRow = $rowIndex - 1;
+    if ($lastDataRow >= $dataStartRow) {
+        foreach (['D', 'E', 'F', 'H', 'I'] as $column) {
+            $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)
+                ->getNumberFormat()
+                ->setFormatCode('[$-409]#,##0');
+        }
+        foreach (['G', 'J', 'K'] as $column) {
+            $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)
+                ->getNumberFormat()
+                ->setFormatCode('[$-42A]#,##0');
+        }
+        $sheet->getStyle('D' . $dataStartRow . ':' . $lastColumn . $lastDataRow)
+            ->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+    }
+
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
@@ -291,7 +339,7 @@ $query_error = '';
 $query_hint = '';
 
 if (!isset($oracle_conn) || $oracle_conn === null) {
-    $query_error = 'Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.';
+    $query_error = 'Chưa kết nối được Oracle. Kiểm tra OCI8 và thông tin kết nối trong DB/connect_DB.php.';
 } else {
     $keyword_upper = strtoupper($keyword);
     $fast_dgx_search = is_fast_dgx_keyword($keyword) ? $keyword_upper : '';
@@ -339,7 +387,7 @@ if (!isset($oracle_conn) || $oracle_conn === null) {
         }
     }
     if ($query_error !== '') {
-        $query_hint = 'Can cap nhat dung ten bang/view va cot trong khoi SQL o DGX/dgx.php.';
+        $query_hint = 'Cần cập nhật đúng tên bảng/view và cột trong khối SQL ở DGX/dgx.php.';
     }
 }
 
@@ -358,14 +406,14 @@ if ($page > 1) $canonical_params['page'] = $page;
 </head>
 <body>
 <div class="container">
-    <h1 class="page-title"><a href="<?php echo $index_url; ?>">Tổng Hợp các DGX</a></h1>
+    <h1 class="page-title"><a href="<?php echo $index_url; ?>">Tổng hợp các DGX</a></h1>
 
     <form method="get" action="<?php echo $index_url; ?>" class="search-form">
         <input type="hidden" name="page" id="search_page" value="<?php echo $page; ?>">
         <input class="field-keyword" type="text" name="keyword" placeholder="Tìm theo mã PGD, tên POS, mã DGX, tên điểm" value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>">
         <input class="field-date" type="date" name="from_date" value="<?php echo htmlspecialchars($from_date, ENT_QUOTES, 'UTF-8'); ?>" title="Ngày GDX">
         <button type="button" class="btn-fixed-list" id="openFixedListBtn">Danh sách điểm cố định</button>
-        <button type="submit" class="btn-search">Search</button>
+        <button type="submit" class="btn-search">Tìm kiếm</button>
     </form>
 
     <div class="meta">Tổng số: <?php echo number_format($total_rows); ?> điểm</div>

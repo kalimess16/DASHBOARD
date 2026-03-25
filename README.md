@@ -1,4 +1,4 @@
-# Quy Ước Dashboard
+# Quy ước Dashboard
 
 ## Cấu Trúc Tính Năng
 
@@ -34,8 +34,15 @@ Khi tạo một tính năng mới, tách file theo đúng trách nhiệm:
   - `USER-SYSTEM/user_system.php`
   - `USER-SYSTEM/user_system_sql.php`
   - `view/Style_user_system.php`
+
 ## Quy Ước Thông Báo USER-SYSTEM
 
 - Với `USER-SYSTEM`, cả thêm mới ở `USER-SYSTEM/layout_insert.php` và cập nhật ở `USER-SYSTEM/user_system.php` đều phải có thông báo sau khi lưu.
 - Luồng chuẩn là: xác nhận trên giao diện trước khi ghi, sau đó redirect về đúng màn hình đang thao tác và hiện flash thành công hoặc thất bại.
 - Form POST cần gửi `return_url` để quay lại đúng màn hình và `return_keyword` để giữ bộ lọc khi cập nhật từ trang danh sách.
+
+## Quy Ước Xuất Excel DGX
+
+- `DGX/dgx.php`: phần `api=report_excel` phải có tiêu đề báo cáo ở đầu sheet.
+- File xuất cần dùng font mặc định `Times New Roman`.
+- Nếu có dòng thông tin phụ, chỉ hiển thị khi thực sự cần để tránh chừa khoảng trắng dư phía trên bảng dữ liệu.
