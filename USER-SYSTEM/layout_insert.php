@@ -42,15 +42,6 @@ function layout_insert_normalize_text(string $value): string
     return trim(preg_replace('/\s+/', ' ', $value) ?? $value);
 }
 
-function layout_insert_normalize_giaoviec(string $value): string
-{
-    $normalized = strtoupper(trim($value));
-    if ($normalized === '' || $normalized === 'N') {
-        return 'N';
-    }
-
-    return 'Y';
-}
 
 function layout_insert_text(string $value): string
 {
@@ -126,7 +117,6 @@ $form_values = [
     'maphong' => layout_insert_normalize_text((string)($_GET['maphong'] ?? '')),
     'machucvu' => layout_insert_normalize_text((string)($_GET['machucvu'] ?? '')),
     'email' => layout_insert_normalize_text((string)($_GET['email'] ?? '')),
-    'giaoviec' => layout_insert_normalize_giaoviec((string)($_GET['giaoviec'] ?? 'N')),
 ];
 
 $department_err = '';
@@ -275,13 +265,7 @@ if ($position_rows === null && $query_error === '') {
                         <span>Mật khẩu</span>
                         <input type="password" name="password" id="password" placeholder="Nhập mật khẩu ban đầu" autocomplete="new-password">
                     </label>
-                    <label>
-                        <span>Giao viec</span>
-                        <select name="giaoviec" id="giaoviec">
-                            <option value="N" <?php echo $form_values['giaoviec'] === 'N' ? 'selected' : ''; ?>>N</option>
-                            <option value="Y" <?php echo $form_values['giaoviec'] === 'Y' ? 'selected' : ''; ?>>Y</option>
-                        </select>
-                    </label>
+
                     <label class="span-2">
                         <span>Email</span>
                         <input type="email" name="email" id="email" value="<?php echo layout_insert_text($form_values['email']); ?>" placeholder="user@example.com">

@@ -56,15 +56,6 @@ function normalize_text(string $value): string
     return trim(preg_replace('/\s+/', ' ', $value) ?? $value);
 }
 
-function normalize_giaoviec_value(string $value): string
-{
-    $normalized = strtoupper(trim($value));
-    if ($normalized === '' || $normalized === 'N') {
-        return 'N';
-    }
-
-    return 'Y';
-}
 
 function user_system_resolve_return_url(string $value, string $fallback): string
 {
@@ -135,6 +126,16 @@ function user_system_row_matches(array $row, string $keyword): bool
     }
 
     return strpos($haystack, $keyword) !== false;
+}
+
+function user_system_row_matches_department(array $row, string $departmentCode): bool
+{
+    $departmentCode = trim($departmentCode);
+    if ($departmentCode === '') {
+        return true;
+    }
+
+    return trim((string)($row['maphong'] ?? '')) === $departmentCode;
 }
 
 function db_fetch_assoc_rows(mysqli $conn, string $sql, array $binds = [], ?string &$err = null): ?array
@@ -227,6 +228,7 @@ function user_system_option_exists(array $rows, string $valueKey, string $select
 
 $index_url = '/dashboard/USER-SYSTEM/user_system.php';
 $keyword = normalize_text((string)($_GET['keyword'] ?? ''));
+$filter_maphong = normalize_text((string)($_GET['filter_maphong'] ?? ''));
 $macanbo = normalize_text((string)($_GET['macanbo'] ?? ''));
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per_page = 20;
@@ -242,7 +244,6 @@ $current_user = [
     'email' => '',
     'maphong' => '',
     'machucvu' => '',
-    'giaoviec' => 'N',
     'password_hash' => '',
 ];
 
@@ -256,6 +257,9 @@ if ($department_rows === null) {
         $query_error = $department_err !== '' ? $department_err : 'Không đọc được danh sách phòng ban.';
     }
     $department_rows = [];
+}
+if ($filter_maphong !== '' && !user_system_option_exists($department_rows, 'department_code', $filter_maphong)) {
+    $filter_maphong = '';
 }
 
 $position_err = '';
@@ -278,7 +282,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'detail') {
     if ($detail_row === null) {
         json_exit(['ok' => false, 'message' => $detail_err !== '' ? $detail_err : 'Khong doc duoc thong tin user.']);
     }
-    $detail_row['giaoviec'] = normalize_giaoviec_value((string)($detail_row['giaoviec'] ?? ''));
+
     json_exit(['ok' => true, 'row' => $detail_row]);
 }
 
@@ -290,7 +294,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'list') {
     }
     $filtered = [];
     foreach ($rows as $row) {
-        if (user_system_row_matches($row, $keyword)) {
+        if (user_system_row_matches($row, $keyword) && user_system_row_matches_department($row, $filter_maphong)) {
             $filtered[] = $row;
         }
     }
@@ -317,6 +321,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     $posted_macanbo = normalize_text((string)($_POST['macanbo'] ?? ''));
     $return_url = user_system_resolve_return_url((string)($_POST['return_url'] ?? ''), $index_url);
     $return_keyword = normalize_text((string)($_POST['return_keyword'] ?? ''));
+    $return_filter_maphong = normalize_text((string)($_POST['return_filter_maphong'] ?? ''));
     $return_page = max(1, (int)($_POST['return_page'] ?? 1));
     $is_update = $original_macanbo !== '';
     $action_text = $is_update ? 'cập nhật' : 'thêm mới';
@@ -326,6 +331,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
         user_system_redirect($return_url, [
             'macanbo' => $is_update ? $original_macanbo : $posted_macanbo,
             'keyword' => $return_keyword,
+            'filter_maphong' => $return_url === $index_url ? $return_filter_maphong : '',
             'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
         ]);
     }
@@ -335,7 +341,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     $maphong = normalize_text((string)($_POST['maphong'] ?? ''));
     $machucvu = normalize_text((string)($_POST['machucvu'] ?? ''));
     $email = normalize_text((string)($_POST['email'] ?? ''));
-    $giaoviec = normalize_giaoviec_value((string)($_POST['giaoviec'] ?? 'N'));
 
     if ($posted_macanbo === '' || $hoten === '') {
         user_system_flash_set('Vui long nhap ma can bo va ho ten.', 'error');
@@ -345,8 +350,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
             'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
             'email' => !$is_update && $return_url !== $index_url ? $email : '',
-            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
             'keyword' => $return_keyword,
+            'filter_maphong' => $return_url === $index_url ? $return_filter_maphong : '',
             'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
         ]);
     }
@@ -360,8 +365,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
             'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
             'email' => !$is_update && $return_url !== $index_url ? $email : '',
-            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
             'keyword' => $return_keyword,
+            'filter_maphong' => $return_url === $index_url ? $return_filter_maphong : '',
             'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
         ]);
     }
@@ -374,8 +379,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             'maphong' => !$is_update && $return_url !== $index_url ? $maphong : '',
             'machucvu' => !$is_update && $return_url !== $index_url ? $machucvu : '',
             'email' => !$is_update && $return_url !== $index_url ? $email : '',
-            'giaoviec' => !$is_update && $return_url !== $index_url ? $giaoviec : '',
             'keyword' => $return_keyword,
+            'filter_maphong' => $return_url === $index_url ? $return_filter_maphong : '',
             'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
         ]);
     }
@@ -391,7 +396,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được insert SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('sssssss', $posted_macanbo, $hoten, $hashps, $maphong, $machucvu, $email, $giaoviec);
+                $bind_ok = $stmt->bind_param('ssssss', $posted_macanbo, $hoten, $hashps, $maphong, $machucvu, $email);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không insert được user.';
                 }
@@ -406,7 +411,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được update SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('sssssss', $hoten, $hashps, $maphong, $machucvu, $email, $giaoviec, $original_macanbo);
+                $bind_ok = $stmt->bind_param('ssssss', $hoten, $hashps, $maphong, $machucvu, $email, $original_macanbo);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không update được user.';
                 }
@@ -418,7 +423,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
             if ($stmt === false) {
                 $write_err = $conn->error !== '' ? $conn->error : 'Không prepare được update SQL.';
             } else {
-                $bind_ok = $stmt->bind_param('ssssss', $hoten, $maphong, $machucvu, $email, $giaoviec, $original_macanbo);
+                $bind_ok = $stmt->bind_param('sssss', $hoten, $maphong, $machucvu, $email, $original_macanbo);
                 if ($bind_ok === false || !$stmt->execute()) {
                     $write_err = $stmt->error !== '' ? $stmt->error : 'Không update được user.';
                 }
@@ -436,6 +441,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
     $redirect_params = [
         'macanbo' => $return_url === $index_url ? ($is_update ? $original_macanbo : $posted_macanbo) : '',
         'keyword' => $return_url === $index_url ? $return_keyword : '',
+        'filter_maphong' => $return_url === $index_url ? $return_filter_maphong : '',
         'page' => $return_url === $index_url && $return_page > 1 ? $return_page : '',
     ];
     if ($write_err !== '' && !$is_update && $return_url !== $index_url) {
@@ -444,7 +450,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save') {
         $redirect_params['maphong'] = $maphong;
         $redirect_params['machucvu'] = $machucvu;
         $redirect_params['email'] = $email;
-        $redirect_params['giaoviec'] = $giaoviec;
     }
 
     user_system_redirect($return_url, $redirect_params);
@@ -458,7 +463,7 @@ if ($all_rows === null) {
 }
 $filtered_rows = [];
 foreach ($all_rows as $row) {
-    if (user_system_row_matches($row, $keyword)) {
+    if (user_system_row_matches($row, $keyword) && user_system_row_matches_department($row, $filter_maphong)) {
         $filtered_rows[] = $row;
     }
 }
@@ -505,11 +510,14 @@ if ($macanbo !== '') {
         $current_user = array_merge($current_user, $detail_row);
     }
 }
-$current_user['giaoviec'] = normalize_giaoviec_value((string)($current_user['giaoviec'] ?? ''));
+
 
 $canonical_params = [];
 if ($keyword !== '') {
     $canonical_params['keyword'] = $keyword;
+}
+if ($filter_maphong !== '') {
+    $canonical_params['filter_maphong'] = $filter_maphong;
 }
 if ($macanbo !== '') {
     $canonical_params['macanbo'] = $macanbo;
@@ -569,7 +577,22 @@ if ($page > 1) {
 
     <form method="get" action="<?php echo $index_url; ?>" class="search-bar" id="filterForm">
         <input type="text" name="keyword" class="field-keyword" placeholder="Tìm theo mã cán bộ, họ tên, phòng, chức vụ, email..." value="<?php echo user_system_text($keyword); ?>">
-        <input type="hidden" name="page" id="filterPage" value="<?php echo (int)$page; ?>">
+        <select name="filter_maphong" class="field-status" id="filterMaphong">
+            <option value="">Tất cả phòng ban</option>
+            <?php foreach ($department_rows as $department): ?>
+                <?php
+                $department_code = trim((string)($department['department_code'] ?? ''));
+                $department_name = trim((string)($department['department_name'] ?? ''));
+                if ($department_code === '') {
+                    continue;
+                }
+                ?>
+                <option value="<?php echo user_system_text($department_code); ?>" <?php echo $department_code === $filter_maphong ? 'selected' : ''; ?>>
+                    <?php echo user_system_text($department_name !== '' ? $department_name : $department_code); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <input type="hidden" name="page" id="filterPage" value="1">
         <button type="submit" class="btn-search">Lọc danh sách</button>
     </form>
 
@@ -693,6 +716,7 @@ if ($page > 1) {
                 <input type="hidden" name="confirm_write" id="confirmWrite" value="0">
                 <input type="hidden" name="original_macanbo" id="originalMacanbo" value="<?php echo user_system_text((string)$current_user['macanbo']); ?>">
                 <input type="hidden" name="return_keyword" value="<?php echo user_system_text($keyword); ?>">
+                <input type="hidden" name="return_filter_maphong" value="<?php echo user_system_text($filter_maphong); ?>">
                 <input type="hidden" name="return_page" value="<?php echo (int)$page; ?>">
                 <input type="hidden" name="return_url" value="<?php echo user_system_text($index_url); ?>">
 
@@ -751,13 +775,7 @@ if ($page > 1) {
                             <?php endif; ?>
                         </select>
                     </label>
-                    <label>
-                        <span>Giao viec</span>
-                        <select name="giaoviec" id="giaoviec">
-                            <option value="N" <?php echo (string)$current_user['giaoviec'] === 'N' ? 'selected' : ''; ?>>N</option>
-                            <option value="Y" <?php echo (string)$current_user['giaoviec'] === 'Y' ? 'selected' : ''; ?>>Y</option>
-                        </select>
-                    </label>
+
                     <label>
                         <span>M&#7853;t kh&#7849;u</span>
                         <input type="password" name="password" id="password" placeholder="&#272;&#7875; tr&#7889;ng n&#7871;u kh&#244;ng &#273;&#7893;i" autocomplete="new-password">

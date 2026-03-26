@@ -57,15 +57,15 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## CODE-ORCALE_SQL
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái:  TODO
+- Ưu tiên:  cao
 - File liên quan: CODE.SQL
-- Mục tiêu: KHẮC PHỤC LỖI tiếng việt
-- Yêu cầu chi tiết: khắc phục các lỗi tiếng việt đang bị mã hóa
+- Mục tiêu: khắc phục câu lệnh để truy vấn đúng
+- Yêu cầu chi tiết: trong hàm select aa thì két quả ra 280 dòng, mà khi select tổng code thì chỉ ra 272 dòng, hãy giúp tôi xử lý ra 280 dòng
 - Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
-- Kết quả mong muốn: xử lý hết lỗi tiếng việt
+- Kết quả mong muốn: có thể xuất ra dữ liệu 280 dòng dữ liệu
 - Cách kiểm tra: KHÔNG
-- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL THÔI và sinh ra file md. trong thư mục nhắc nhở
+- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL 
 
 ## DB
 
@@ -110,14 +110,14 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 - Trạng thái: 
-- Ưu tiên: 
+- Ưu tiên:  
 - File liên quan: user_system_sql, user_system.php, layout_insert.php, user_system.md
-- Mục tiêu: thêm điều kiện về tiêu chí giaoviec
-- Yêu cầu chi tiết: Phần giao việc nếu chọn "N" thì insert hoặc updte thì set giaoviec = null
+- Mục tiêu: bổ sung tính năng lọc theo phòng ban
+- Yêu cầu chi tiết: lựa chọn phòng ban từ hệ thống để lọc danh sách, phòng ban dưới dạng combox
 - Không được đụng vào: các thư mục khác
-- Kết quả mong muốn: có thể load, inser, update được các thông tin chi tiết cán bộ
-- Cách kiểm tra: 
-- Ghi chú thêm: 
+- Kết quả mong muốn: click phòng bàn, nhắn lọc danh sách
+- Cách kiểm tra: click phòng bàn, nhắn lọc danh sách
+- Ghi chú thêm: cập nhật vào md của thư mục
 
 ## VB_IOT
 

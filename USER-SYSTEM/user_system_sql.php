@@ -37,8 +37,7 @@ function user_system_detail_sql(): string
             p.tenphong,
             u.email,
             u.MAPHONG AS maphong,
-            u.MACHUCVU AS machucvu,
-            u.giaoviec AS giaoviec
+            u.MACHUCVU AS machucvu
         FROM canbo u
         INNER JOIN phongban p ON u.MAPHONG = p.MAPHONG
         LEFT JOIN CHUCVU CV ON CV.MACV = u.MACHUCVU
@@ -60,7 +59,7 @@ function user_system_insert_sql(): string
             email,
             menudp,
             giaoviec
-        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?,'ALL',NULLIF(?, 'N'))
+        ) VALUES (?, ?, PASSWORD(?), ?, ?, ?,'ALL',NULL)
     ";
 }
 
@@ -75,7 +74,7 @@ function user_system_update_sql(bool $include_password = false): string
                 MAPHONG = ?,
                 MACHUCVU = ?,
                 email = ?,
-                giaoviec = NULLIF(?, 'N')
+                giaoviec = NULL
             WHERE macanbo = ?
         ";
     }
@@ -87,7 +86,7 @@ function user_system_update_sql(bool $include_password = false): string
             MAPHONG = ?,
             MACHUCVU = ?,
             email = ?,
-            giaoviec = NULLIF(?, 'N')
+            giaoviec = NULL
         WHERE macanbo = ?
     ";
 }

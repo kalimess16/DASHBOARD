@@ -1,34 +1,35 @@
 # USER-SYSTEM Notes
 
-## Mã hóa bắt buộc
+## Ma hoa bat buoc
 
-- Tất cả file trong thư mục `USER-SYSTEM` phải lưu bằng `UTF-8` không BOM.
-- Không chuyển file qua ANSI, Windows-1252, hoặc công cụ làm biến tiếng Việt thành chuỗi kiểu `Quáº£n lÃ½`.
-- Khi sửa text tiếng Việt trong PHP/HTML/JS, luôn kiểm tra lại hiển thị trực tiếp trên web sau khi lưu.
+- Tat ca file trong thu muc `USER-SYSTEM` phai luu bang `UTF-8` khong BOM.
+- Khong chuyen file qua ANSI, Windows-1252, hoac cong cu lam hong text tieng Viet.
+- Khi sua text tieng Viet trong PHP/HTML/JS, luon kiem tra lai hien thi truc tiep tren web sau khi luu.
 
-## File chính
+## File chinh
 
 - `USER-SYSTEM/user_system.php`
-  - Trang chính, xử lý list, detail, save, thông báo.
+  - Trang chinh, xu ly list, detail, save, thong bao.
 - `USER-SYSTEM/user_system_sql.php`
-  - Chỉ chứa hàm SQL.
+  - Chi chua ham SQL.
+- `USER-SYSTEM/layout_insert.php`
+  - Man hinh them moi tach rieng.
 - `view/Style_user_system.php`
-  - CSS cho giao diện `USER-SYSTEM`.
+  - CSS cho giao dien `USER-SYSTEM`.
 
-## Quy ước cho màn Chi tiết cán bộ
+## Quy uoc hien tai
 
-- Thuộc tính `giaoviec` dùng combobox `Y` / `N`.
-- Khi load dữ liệu:
-  - `giaoviec = null` hoặc rỗng thì hiển thị `N`.
-  - Có giá trị khác rỗng thì chuẩn hóa về `Y` hoặc `N`.
-- Khi insert/update:
-  - Luôn bind `giaoviec` cùng với các trường còn lại.
-  - Nếu người dùng chọn `N` thì lưu `giaoviec = null`; chỉ khi chọn `Y` mới lưu giá trị `Y`.
+- Da bo hoan toan truong `giaoviec` khoi giao dien them moi va cap nhat.
+- Khi insert hoac update, he thong khong nhan gia tri `giaoviec` tu form nua.
+- SQL dang chu dong luu `giaoviec = NULL` de khop voi yeu cau hien tai.
+- Man danh sach co them combobox loc theo phong ban, dung gia tri `department_code` tu bang `phongban`.
+- Khi dang loc theo phong ban, phan trang, mo chi tiet va luu ban ghi phai giu nguyen bo loc vua chon.
 
-## Cách kiểm tra nhanh
+## Cach kiem tra nhanh
 
-1. Mở `USER-SYSTEM/user_system.php`.
-2. Kiểm tra tất cả text tiếng Việt hiển thị đúng dấu.
-3. Mở chi tiết một cán bộ có `giaoviec = null`, xác nhận form hiện `N`.
-4. Thử thêm mới với `Y` và `N`.
-5. Thử cập nhật bản ghi hiện có, xác nhận lưu thành công và load lại đúng giá trị.
+1. Mo `USER-SYSTEM/user_system.php`.
+2. Chon mot phong ban trong combobox va bam `Loc danh sach`.
+3. Xac nhan danh sach chi con can bo thuoc phong ban da chon.
+4. Thu ket hop loc theo phong ban voi tu khoa tim kiem va phan trang.
+5. Mo sua mot can bo trong danh sach dang loc, luu lai, xac nhan man hinh quay ve dung bo loc cu.
+6. Mo `USER-SYSTEM/layout_insert.php`, xac nhan form them moi van hoat dong binh thuong.
