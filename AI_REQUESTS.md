@@ -60,13 +60,12 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - Trạng thái:  TODO
 - Ưu tiên:  cao
 - File liên quan: CODE.SQL
-- Mục tiêu: khắc phục câu lệnh để truy vấn đúng
-- Yêu cầu chi tiết: trong hàm select aa thì két quả ra 280 dòng, mà khi select tổng code thì chỉ ra 272 dòng, hãy giúp tôi xử lý ra 280 dòng
+- Mục tiêu: Tìm kiếm nguyên nhân và phân tích
+- Yêu cầu chi tiết: khi tôi run proc này thì báo oke và có số liệu tại bảng hstest mà sao lại không thể lấy được số liệu và server báo lỗi SCHEDULE - CHECK740 - FAIL và ERROR ORACLE CHECK740DAO - HSTDCTNGAY. Khi tôi chạy tay trên orcale thì có thấy báo HSTDCTNGAY và vẫn có số liệu.
 - Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
-- Kết quả mong muốn: có thể xuất ra dữ liệu 280 dòng dữ liệu
+- Kết quả mong muốn: có thể chạy dc - DONE và không ERROR
 - Cách kiểm tra: KHÔNG
 - Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL 
-
 ## DB
 
 ### Task
