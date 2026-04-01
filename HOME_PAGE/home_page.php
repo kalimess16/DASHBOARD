@@ -422,9 +422,12 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         <div class="top-stack">
             <header class="hero">
                 <div class="hero-copy">
-                    <p class="eyebrow">Dashboard Home Page</p>
-                    <h1 class="page-title"><a href="<?php echo $indexUrl; ?>">Tổng hợp dư nợ theo POS / Xã</a></h1>
-                    <div class="hero-meta">
+                    <h1 class="page-title">
+                        <a href="<?php echo $indexUrl; ?>">
+                            <span class="page-title__line">Tổng hợp dư nợ theo POS / Xã</span>
+                        </a>
+                    </h1>
+                    <div class="hero-meta" aria-label="Thông tin tổng quan báo cáo">
                         <span class="meta-chip">Ngày BC: <strong id="metaDate"><?php echo htmlspecialchars($reportDateOracle, ENT_QUOTES, 'UTF-8'); ?></strong></span>
                         <span class="meta-chip">Tổng bản ghi: <strong id="metaTotal">0</strong></span>
                         <span class="meta-chip">Tổng KH: <strong id="metaKh">0</strong></span>
@@ -442,9 +445,21 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             </form>
 
             <div id="errorBox" class="error-box" style="display:none;"></div>
-            <div class="loading" id="loadingBox">
-                <div class="spinner"></div>
-                <div class="loading-text">Đang tải dữ liệu...</div>
+            <div class="loading" id="loadingBox" role="status" aria-live="polite">
+                <div class="loading-badge">Đang lấy số liệu</div>
+                <div class="loading-head">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <div class="loading-copy">
+                        <strong class="loading-title">Hệ thống đang tải dữ liệu báo cáo</strong>
+                        <div class="loading-text">Vui lòng chờ trong giây lát để đồng bộ số liệu mới nhất.</div>
+                    </div>
+                </div>
+                <div class="loading-grid" aria-hidden="true">
+                    <span class="loading-card loading-card--wide"></span>
+                    <span class="loading-card"></span>
+                    <span class="loading-card"></span>
+                    <span class="loading-card"></span>
+                </div>
             </div>
 
             <section class="panel panel-source-toolbar">

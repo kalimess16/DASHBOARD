@@ -14,7 +14,11 @@
 - Font mặc định của màn hình là `Times New Roman`.
 - Layout ưu tiên mở rộng sát hai bên, không bó hẹp phần nội dung chính.
 - Cụm tóm tắt ngày báo cáo / tổng bản ghi / tổng KH nằm ngang ngay dưới tiêu đề hero; khối nguồn vốn nằm ở cột trái phía dưới dưới dạng chip chọn gọn để làm bộ lọc nhanh.
+- Hero chỉ hiển thị tiêu đề chính `Tổng hợp dư nợ theo POS / Xã`, không hiển thị dòng `Dashboard Home Page`.
 - Phần chương trình vay đang hiển thị dưới dạng donut chart ở khối trên bên phải, không dùng danh sách thanh ngang như trước.
+- Số trong ô spotlight ở giữa donut chart phải tự xuống dòng hoặc co vừa khối, không được tràn ra ngoài khi tổng dư nợ lớn.
+- Khi đang tải dữ liệu, `loadingBox` hiển thị dưới dạng một layout loading riêng với text chính `Đang lấy số liệu`, không dùng dòng loading đơn giản như trước.
+- Ở desktop, đỉnh khối hero bên trái và khối biểu đồ bên phải phải thẳng hàng; tránh dùng margin hoặc transform làm lệch nhịp căn chỉnh tổng thể.
 
 ## Hành vi hiện tại cần giữ
 

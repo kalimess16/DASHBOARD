@@ -103,13 +103,14 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 - Trạng thái: TODO
 - Ưu tiên: CAO
-- File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP
+- File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP, view/..
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 
-    + Đọc ảnh gửi đính kèm
-    + Ô đỏ đưa lên trên
-    + Ô vàng "BỎ"
-    + Ô xanh thì đưa vào ô Vàng theo dạng ngang
+    + đọc code này trong home_page <div id="errorBox" class="error-box" style="display:none;"></div>
+            <div class="loading" id="loadingBox">
+                <div class="spinner"></div>
+                <div class="loading-text">Đang tải dữ liệu...</div>
+            </div> xử lý giúp tôi thay vì hiện div này tôi muốn load lên 1 layout đang load " Đang lấy số liệu"
 - Không được đụng vào: các chức năng không liện quan
 - Kết quả mong muốn: khắc phục toàn bộ các yêu cầu trên
 - Cách kiểm tra: vào chức năng home page sẽ thấy được đúng số liệu
