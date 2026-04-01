@@ -1,4 +1,4 @@
-﻿# AI Request Board
+# AI Request Board
 
 File này là nơi nhập yêu cầu để Codex xử lý.
 
@@ -44,6 +44,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## ROOT
 
 ### Task
+
 - Trạng thái:
 - Ưu tiên:
 - File liên quan:
@@ -57,20 +58,23 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## CODE-ORCALE_SQL
 
 ### Task
-- Trạng thái:  TODO
-- Ưu tiên:  cao
+
+- Trạng thái: 
+- Ưu tiên:  
 - File liên quan: CODE.SQL
 - Mục tiêu: Tìm kiếm nguyên nhân và phân tích
 - Yêu cầu chi tiết: khi tôi run proc này thì báo oke và có số liệu tại bảng hstest mà sao lại không thể lấy được số liệu và server báo lỗi SCHEDULE - CHECK740 - FAIL và ERROR ORACLE CHECK740DAO - HSTDCTNGAY. Khi tôi chạy tay trên orcale thì có thấy báo HSTDCTNGAY và vẫn có số liệu.
 - Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
 - Kết quả mong muốn: có thể chạy dc - DONE và không ERROR
 - Cách kiểm tra: KHÔNG
-- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL 
+- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL
+
 ## DB
 
 ### Task
-- Trạng thái: 
-- Ưu tiên: 
+
+- Trạng thái:
+- Ưu tiên:
 - File liên quan: CONNECT_DB.PHP
 - Mục tiêu: xử lý lỗi: Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
 - Yêu cầu chi tiết: khắc phục lỗi Chua ket noi duoc Oracle. Kiem tra OCI8 va thong tin ket noi trong DB/connect_DB.php.
@@ -82,8 +86,9 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## DGX
 
 ### Task
-- Trạng thái: 
-- Ưu tiên: 
+
+- Trạng thái:
+- Ưu tiên:
 - File liên quan: DGX.PHP, dgx_report_layout
 - Mục tiêu: KHẮC PHỤC LỖI TIẾNG VIỆT, định dạng số liệu khi xuất ra báo cáo
 - Yêu cầu chi tiết: sửa lỗi tiếng việt hiển trị trên web, khi xuất ra dữ liệu các số liệu nên định dạng: 1.000.000 đôi với giá trị triền tệ và 1,000 đối với các số liệu khác
@@ -95,20 +100,29 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## HOME_PAGE
 
 ### Task
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
-- Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
-- Ghi chú thêm:
+
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP
+- Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
+- Yêu cầu chi tiết: 
+    + Đọc ảnh gửi đính kèm
+    + Ô đỏ đưa lên trên
+    + Ô vàng "BỎ"
+    + Ô xanh thì đưa vào ô Vàng theo dạng ngang
+- Không được đụng vào: các chức năng không liện quan
+- Kết quả mong muốn: khắc phục toàn bộ các yêu cầu trên
+- Cách kiểm tra: vào chức năng home page sẽ thấy được đúng số liệu
+- Ghi chú thêm: 
+    + Kiểm tra xem nếu cần thì tạo, update các file md liên quan. 
+    + cần thì có thể xử lý css.
+    + đọc thêm tài liệu riêng tại `HOME_PAGE/home_page.md` trước khi sửa tiếp chức năng này.
 
 ## USER-SYSTEM
 
 ### Task
-- Trạng thái: 
+
+- Trạng thái:
 - Ưu tiên:  
 - File liên quan: user_system_sql, user_system.php, layout_insert.php, user_system.md
 - Mục tiêu: bổ sung tính năng lọc theo phòng ban
@@ -121,6 +135,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## VB_IOT
 
 ### Task
+
 - Trạng thái:
 - Ưu tiên:
 - File liên quan:
@@ -134,6 +149,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## view
 
 ### Task
+
 - Trạng thái:
 - Ưu tiên:
 - File liên quan:
@@ -152,7 +168,7 @@ Sao chép khối này khi bạn tạo thư mục mới:
 ## TEN_THU_MUC_MOI
 
 ### Task
-- Trạng thái: TODO
+- Trạng thái: 
 - Ưu tiên: Trung bình
 - File liên quan:
 - Mục tiêu:
@@ -169,7 +185,7 @@ Sao chép khối này khi bạn tạo thư mục mới:
 ## DGX
 
 ### Task
-- Trạng thái: TODO
+- Trạng thái: 
 - Ưu tiên: Cao
 - File liên quan: DGX/dgx.php, DGX/dgx_sql.php
 - Mục tiêu: Thêm bộ lọc theo ngày cho màn hình DGX
