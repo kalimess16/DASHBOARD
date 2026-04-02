@@ -82,6 +82,18 @@ html, body {
 .btn-fixed-list:hover {
     background: linear-gradient(180deg, #ffefcc 0%, #ffe3aa 100%);
 }
+.btn-custom-report {
+    flex: 0 0 230px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    border-color: #6f5f1a;
+    background: linear-gradient(180deg, #8d7b1a 0%, #5f5311 100%);
+    box-shadow: var(--shadow-sm);
+}
+.btn-custom-report:hover {
+    background: linear-gradient(180deg, #7b6a16 0%, #51470d 100%);
+}
 .search-form input:focus {
     outline: none;
     border-color: #c9962a;
@@ -312,6 +324,17 @@ tbody tr:hover td { background: #ffeab7; }
 .fixed-action:hover {
     background: linear-gradient(180deg, #bf7d00 0%, #8f5b00 100%);
 }
+.fixed-control:disabled {
+    color: #8a7340;
+    cursor: not-allowed;
+    background: #f4ecdc;
+}
+.fixed-action:disabled,
+.fixed-close:disabled {
+    opacity: 0.72;
+    cursor: wait;
+    box-shadow: none;
+}
 .fixed-action-secondary {
     color: #5a3b00;
     border-color: #c8a45f;
@@ -394,6 +417,45 @@ tbody tr:hover td { background: #ffeab7; }
 .report-filters .fixed-action {
     flex: 0 0 auto;
 }
+.custom-report-dialog {
+    width: min(96vw, 1560px);
+}
+.custom-report-table {
+    min-width: 1480px;
+    table-layout: auto;
+}
+.custom-report-table th,
+.custom-report-table td {
+    overflow: visible;
+    text-overflow: clip;
+}
+.custom-report-table th:nth-child(3),
+.custom-report-table td:nth-child(3),
+.custom-report-table th:nth-child(4),
+.custom-report-table td:nth-child(4) {
+    white-space: normal;
+    word-break: break-word;
+}
+.custom-report-table th:nth-child(1),
+.custom-report-table td:nth-child(1),
+.custom-report-table th:nth-child(2),
+.custom-report-table td:nth-child(2) {
+    text-align: center;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.custom-report-table th:nth-child(n+5),
+.custom-report-table td:nth-child(n+5) {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.custom-report-filters .fixed-control {
+    flex: 1 1 220px;
+}
+.custom-report-filters .fixed-action {
+    flex: 0 0 auto;
+}
 .fixed-empty {
     text-align: center;
     color: #8d7340;
@@ -431,6 +493,10 @@ tbody tr:hover td { background: #ffeab7; }
         flex: 0 0 auto;
     }
     .btn-fixed-list {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+    .btn-custom-report {
         width: 100%;
         flex: 0 0 auto;
     }

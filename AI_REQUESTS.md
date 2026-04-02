@@ -87,22 +87,28 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái:
-- Ưu tiên:
-- File liên quan: DGX.PHP, dgx_report_layout
-- Mục tiêu: KHẮC PHỤC LỖI TIẾNG VIỆT, định dạng số liệu khi xuất ra báo cáo
-- Yêu cầu chi tiết: sửa lỗi tiếng việt hiển trị trên web, khi xuất ra dữ liệu các số liệu nên định dạng: 1.000.000 đôi với giá trị triền tệ và 1,000 đối với các số liệu khác
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: DGX.PHP, dgx_report_layout,dgx_sql.php, view/..
+- Mục tiêu: xuất báo cáo không thể hiện tên GDV
+- Yêu cầu chi tiết: 
+    + đọc code gửi kèm
+    + xử lý lỗi không thể hiện tên GDV
+    + dựa vào code mới có tối ưu dc các code còn lại không? nếu có thì cập nhật là update giúp, không ảnh hưởng tới các chức năng khác
 - Không được đụng vào: các thư mục khác
-- Kết quả mong muốn: xử lý triệt để các lỗi trên và lưu vào md tránh trường hợp bị sai font chữ
-- Cách kiểm tra: vào DGX xem nội dung bên trong, nhắn "báo cáo", "Xuất excel", file báo cáo sẽ thiết lập lại định đạng số và tiền tệ
-- Ghi chú thêm:
+- Kết quả mong muốn: xử lý các vấn đề nêu trên
+- Cách kiểm tra: vào DGX xem nội dung bên trong, nhấnn "Báo cáo theo yêu cầu" - nhập, báo cáo sẽ ra kết quả
+- Ghi chú thêm: 
+    + Kiểm tra xem nếu cần thì tạo, update các file md trong thư mục DGX
+    + cần thì có thể xử lý css.
+    + Nếu thư mục đã có thì cập nhật thêm vào file md có trong thư mục trước khi sửa tiếp chức năng này.
 
 ## HOME_PAGE
 
 ### Task
 
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP, view/..
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 

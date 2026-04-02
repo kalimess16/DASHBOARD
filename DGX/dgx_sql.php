@@ -235,7 +235,7 @@ function dgx_report_sql(): string
             )
         SELECT DISTINCT
             AA.ma_pgd AS MAPOS,
-            CB.HOTEN AS TEN_GDV,
+            NVL(TRIM(CB.HO_TEN), TRIM(CIN.HO_TEN)) AS TEN_GDV,
             gg.ten_dgd AS DIEM_GDX,
             cc.soto AS TO_TN,
             cc.soku AS SO_KU,
@@ -246,7 +246,8 @@ function dgx_report_sql(): string
             ff.guitk AS GUITK,
             ff.ruttk AS RUTTK
         FROM AA
-        LEFT JOIN HS_CANBO_TTBC cb ON CB.MACB = AA.GDV
+        LEFT JOIN CHUAN_HOA_TK_INTELLECT cb ON UPPER(TRIM(CB.MA_CB)) = UPPER(TRIM(AA.GDV))
+        LEFT JOIN CHUAN_HOA_TK_INTELLECT cin ON UPPER(TRIM(CIN.USER_INTELLECT)) = UPPER(TRIM(AA.GDV))
         LEFT JOIN TK_G cc ON aa.gdv = cc.gdv AND aa.ma_pgd = cc.ma_pgd AND aa.ma_diem_gdx = cc.ma_diem_gdx
         LEFT JOIN GN bb ON aa.gdv = bb.gdv AND aa.ma_pgd = bb.ma_pgd AND aa.ma_diem_gdx = bb.ma_diem_gdx
         LEFT JOIN TK_TM dd ON aa.gdv = dd.gdv AND aa.ma_pgd = dd.ma_pgd AND aa.ma_diem_gdx = dd.ma_diem_gdx
@@ -277,4 +278,166 @@ function dgx_missing_codes_sql(): string
         ORDER BY 1
     ";
 }
-
+function dgx_custom_report_sql(): string
+{
+    return "
+        WITH
+            PARAMS AS (
+                SELECT TO_DATE(:P_FROM_DATE, 'DD/MM/YYYY') AS FROM_DATE_VALUE,
+                       TO_DATE(:P_TO_DATE, 'DD/MM/YYYY') AS TO_DATE_VALUE,
+                       :P_MAPOS AS MAPOS
+                FROM DUAL
+            ),
+            FILTER_POS AS (
+                SELECT DISTINCT UPPER(TRIM(REGEXP_SUBSTR((SELECT MAPOS FROM PARAMS), '[^;]+', 1, LEVEL))) AS MA_PGD
+                FROM DUAL
+                CONNECT BY REGEXP_SUBSTR((SELECT MAPOS FROM PARAMS), '[^;]+', 1, LEVEL) IS NOT NULL
+            ),
+            GDTN_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, LOAI_GIAO_DICH, MA_TO, MA_KH, SO_KU, SO_TIEN_LAI, PT_TRA_NO, SO_TIEN_GOC, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_GDTN g
+                WHERE TRUNC(g.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(g.MA_PGD))))
+            ),
+            TKTO_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, MA_KH, SO_TIEN_GUI, LAI_TRA, GOC_TRA, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_TKTO t
+                WHERE TRUNC(t.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(t.MA_PGD))))
+            ),
+            GDTG_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, MA_KH, SO_TIEN_GUI, SO_TIEN_RUT, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_GDTG t
+                WHERE MA_SAN_PHAM = '105'
+                  AND TRUNC(t.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(t.MA_PGD))))
+            ),
+            TIDE_BOOKING_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, SO_SO, DU_GOC, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_TIDE_BOOKING t
+                WHERE TRUNC(t.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(t.MA_PGD))))
+            ),
+            TIDE_WITHDRAW_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, SO_SO, SO_TIEN_THUC_NHAN, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_TIDE_WITHDRAWAL t
+                WHERE TRUNC(t.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(t.MA_PGD))))
+            ),
+            GDGN_RANGE AS (
+                SELECT /*+ MATERIALIZE */ GDV, MA_PGD, MA_DIEM_GDX, SO_KU, SO_TIEN_GN, TRUNC(NGAY_GD) AS NGAY_GD
+                FROM OFL_GDGN t
+                WHERE TRUNC(t.NGAY_GD) BETWEEN (SELECT FROM_DATE_VALUE FROM PARAMS) AND (SELECT TO_DATE_VALUE FROM PARAMS)
+                  AND ((SELECT MAPOS FROM PARAMS) IS NULL OR EXISTS (SELECT 1 FROM FILTER_POS f WHERE f.MA_PGD = UPPER(TRIM(t.MA_PGD))))
+            ),
+            AA AS (
+                SELECT DISTINCT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD FROM GDTN_RANGE
+            ),
+            TEN_DIEM_GDX AS (
+                SELECT DISTINCT ma_dgd, ten_dgd FROM dm_dia_phuong_dgd
+            ),
+            TK_G AS (
+                SELECT B.ma_pgd, B.ma_diem_gdx, B.GDV, B.NGAY_GD,
+                       SOTO, SOKU,
+                       TONGGOC - (GOCTM_TO + GOCTM_CN) AS THUGOC_CK,
+                       GOCTM_TO + GOCTM_CN AS THUGOC_TM,
+                       TONGLAI - (LAITM_TO + LAITM_CN) AS THULAI_CK,
+                       LAITM_TO + LAITM_CN AS THULAI_TM
+                FROM (
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD,
+                           SUM(CASE WHEN LAI_TRA > SO_TIEN_GUI THEN SO_TIEN_GUI ELSE LAI_TRA END) AS LAITM_TO,
+                           SUM(CASE WHEN GOC_TRA = 0 THEN 0 ELSE SO_TIEN_GUI - CASE WHEN LAI_TRA > SO_TIEN_GUI THEN SO_TIEN_GUI ELSE LAI_TRA END END) AS GOCTM_TO
+                    FROM TKTO_RANGE
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                ) A
+                INNER JOIN (
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD,
+                           COUNT(DISTINCT MA_TO) AS SOTO,
+                           COUNT(DISTINCT SO_KU) AS SOKU,
+                           SUM(SO_TIEN_LAI) AS TONGLAI,
+                           SUM(CASE WHEN PT_TRA_NO = 'D2GL' THEN SO_TIEN_LAI ELSE 0 END) AS LAITM_CN,
+                           SUM(CASE WHEN PT_TRA_NO = 'D2GL' THEN SO_TIEN_GOC ELSE 0 END) AS GOCTM_CN,
+                           SUM(SO_TIEN_GOC) AS TONGGOC
+                    FROM GDTN_RANGE
+                    WHERE LOAI_GIAO_DICH = 'G'
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                ) B ON A.GDV = B.GDV AND A.ma_pgd = B.ma_pgd AND A.ma_diem_gdx = B.ma_diem_gdx AND A.NGAY_GD = B.NGAY_GD
+            ),
+            GN AS (
+                SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(DISTINCT SO_KU) AS SOKU, SUM(SO_TIEN_GN) AS GIAINGAN
+                FROM GDGN_RANGE
+                GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+            ),
+            TK_TM AS (
+                SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, SUM(sokh) AS sokh_gdtk, SUM(guitk_tm) AS guitk_tm, SUM(ruttk_tm) AS ruttk_tm
+                FROM (
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(DISTINCT MA_KH) AS sokh, SUM(SO_TIEN_GUI - LAI_TRA) AS guitk_tm, 0 AS ruttk_tm
+                    FROM TKTO_RANGE
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                    UNION ALL
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(DISTINCT MA_KH) AS sokh, SUM(SO_TIEN_GUI) AS guitk_tm, SUM(SO_TIEN_RUT) AS ruttk_tm
+                    FROM GDTG_RANGE
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                )
+                GROUP BY MA_PGD, GDV, MA_DIEM_GDX, NGAY_GD
+            ),
+            TNCN AS (
+                SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(DISTINCT MA_KH) AS THUNO_CANHAN
+                FROM GDTN_RANGE
+                WHERE LOAI_GIAO_DICH = 'P'
+                GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+            ),
+            TKCKH AS (
+                SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, SUM(sokh_tkckh) AS sokh_tkckh, SUM(guitk) AS guitk, SUM(ruttk) AS ruttk
+                FROM (
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(SO_SO) AS sokh_tkckh, SUM(DU_GOC) AS guitk, SUM(0) AS ruttk
+                    FROM TIDE_BOOKING_RANGE
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                    UNION ALL
+                    SELECT GDV, MA_PGD, MA_DIEM_GDX, NGAY_GD, COUNT(SO_SO) AS sokh_tkckh, SUM(0) AS guitk, SUM(SO_TIEN_THUC_NHAN) AS ruttk
+                    FROM TIDE_WITHDRAW_RANGE
+                    GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+                )
+                GROUP BY MA_PGD, MA_DIEM_GDX, GDV, NGAY_GD
+            )
+        SELECT
+            RESULT_ROWS.NGAY_GIAO_DICH_XA,
+            RESULT_ROWS.MAPOS,
+            RESULT_ROWS.TEN_GDV,
+            RESULT_ROWS.DIEM_GDX,
+            RESULT_ROWS.TO_TN,
+            RESULT_ROWS.SO_KU,
+            RESULT_ROWS.KH_GN,
+            RESULT_ROWS.SOTIEN_GN,
+            RESULT_ROWS.KH_TNCN,
+            RESULT_ROWS.KH_TKCKH,
+            RESULT_ROWS.GUITK,
+            RESULT_ROWS.RUTTK
+        FROM (
+            SELECT DISTINCT
+                AA.NGAY_GD AS NGAY_GD_SORT,
+                TO_CHAR(AA.NGAY_GD, 'DD/MM/YYYY') AS NGAY_GIAO_DICH_XA,
+                AA.ma_pgd AS MAPOS,
+                NVL(TRIM(CB.HO_TEN), TRIM(CIN.HO_TEN)) AS TEN_GDV,
+                gg.ten_dgd AS DIEM_GDX,
+                cc.soto AS TO_TN,
+                cc.soku AS SO_KU,
+                bb.soku AS KH_GN,
+                bb.giaingan AS SOTIEN_GN,
+                ee.THUNO_CANHAN AS KH_TNCN,
+                ff.sokh_tkckh AS KH_TKCKH,
+                ff.guitk AS GUITK,
+                ff.ruttk AS RUTTK
+            FROM AA
+            LEFT JOIN CHUAN_HOA_TK_INTELLECT cb ON UPPER(TRIM(CB.MA_CB)) = UPPER(TRIM(AA.GDV))
+            LEFT JOIN CHUAN_HOA_TK_INTELLECT cin ON UPPER(TRIM(CIN.USER_INTELLECT)) = UPPER(TRIM(AA.GDV))
+            LEFT JOIN TK_G cc ON aa.gdv = cc.gdv AND aa.ma_pgd = cc.ma_pgd AND aa.ma_diem_gdx = cc.ma_diem_gdx AND aa.ngay_gd = cc.ngay_gd
+            LEFT JOIN GN bb ON aa.gdv = bb.gdv AND aa.ma_pgd = bb.ma_pgd AND aa.ma_diem_gdx = bb.ma_diem_gdx AND aa.ngay_gd = bb.ngay_gd
+            LEFT JOIN TK_TM dd ON aa.gdv = dd.gdv AND aa.ma_pgd = dd.ma_pgd AND aa.ma_diem_gdx = dd.ma_diem_gdx AND aa.ngay_gd = dd.ngay_gd
+            LEFT JOIN TNCN ee ON aa.gdv = ee.gdv AND aa.ma_pgd = ee.ma_pgd AND aa.ma_diem_gdx = ee.ma_diem_gdx AND aa.ngay_gd = ee.ngay_gd
+            LEFT JOIN TKCKH ff ON aa.gdv = ff.gdv AND aa.ma_pgd = ff.ma_pgd AND aa.ma_diem_gdx = ff.ma_diem_gdx AND aa.ngay_gd = ff.ngay_gd
+            INNER JOIN TEN_DIEM_GDX gg ON aa.ma_diem_gdx = gg.ma_dgd
+        ) RESULT_ROWS
+        ORDER BY RESULT_ROWS.NGAY_GD_SORT DESC, RESULT_ROWS.MAPOS, RESULT_ROWS.DIEM_GDX, RESULT_ROWS.TEN_GDV
+    ";
+}

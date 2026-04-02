@@ -20,6 +20,11 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }
 
+// Release the session lock early so long Oracle requests do not block other tabs.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 function normalize_date_input(string $value): string
 {
     $value = trim($value);
@@ -108,6 +113,134 @@ function get_missing_dgx_codes($conn, string $report_date_ddmmyyyy, string $code
     return $codes;
 }
 
+function normalize_pos_codes_input(string $value): string
+{
+    $value = strtoupper(trim($value));
+    if ($value === '') return '';
+    $parts = preg_split('/[;\s,]+/', $value) ?: [];
+    $codes = [];
+    foreach ($parts as $part) {
+        $code = preg_replace('/[^A-Z0-9_-]/', '', trim((string)$part)) ?? '';
+        if ($code === '') continue;
+        if (ctype_digit($code) && strlen($code) < 6) {
+            $code = str_pad($code, 6, '0', STR_PAD_LEFT);
+        }
+        $codes[$code] = true;
+    }
+    return implode(';', array_keys($codes));
+}
+
+function spreadsheet_library_available(): bool
+{
+    return class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')
+        && class_exists('\\PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx');
+}
+
+function dgx_set_call_timeout($conn, int $timeout_ms): void
+{
+    if ($timeout_ms <= 0) return;
+    if (function_exists('oci_set_call_timeout')) {
+        @oci_set_call_timeout($conn, $timeout_ms);
+    }
+}
+
+function dgx_refresh_time_limit(int $seconds = 300): void
+{
+    if ($seconds <= 0) return;
+    if (function_exists('set_time_limit')) {
+        @set_time_limit($seconds);
+    }
+}
+
+function dgx_json_encode_payload(array $payload): string
+{
+    $flags = JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+
+    $json = json_encode($payload, $flags);
+    if ($json !== false) {
+        return $json;
+    }
+
+    return '{"ok":false,"message":"Không thể mã hóa dữ liệu báo cáo.","rows":[]}';
+}
+
+function dgx_send_json_response(array $payload, int $statusCode = 200): void
+{
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo dgx_json_encode_payload($payload);
+    exit;
+}
+
+function build_custom_report_timeout_message(string $from_date, string $to_date, string $pos_codes): string
+{
+    $from_label = date('d/m/Y', strtotime($from_date));
+    $to_label = date('d/m/Y', strtotime($to_date));
+    $range_label = $from_label === $to_label
+        ? 'ngày ' . $from_label
+        : 'từ ' . $from_label . ' đến ' . $to_label;
+
+    if ($pos_codes === '') {
+        return 'Oracle xử lý quá lâu cho báo cáo toàn bộ POS ' . $range_label . '. Hãy thu hẹp khoảng ngày hoặc nhập mã POS cụ thể.';
+    }
+
+    return 'Oracle xử lý quá lâu cho báo cáo POS ' . str_replace(';', ', ', $pos_codes) . ' ' . $range_label . '. Hãy chia nhỏ khoảng ngày hoặc tách bớt mã POS.';
+}
+
+function get_custom_report_rows($conn, string $from_date, string $to_date, string $pos_codes, ?string &$err = null): ?array
+{
+    $from_ts = strtotime($from_date . ' 00:00:00');
+    $to_ts = strtotime($to_date . ' 00:00:00');
+    if ($from_ts === false || $to_ts === false || $from_ts > $to_ts) {
+        $err = 'Khoảng ngày không hợp lệ.';
+        return null;
+    }
+
+    dgx_refresh_time_limit(300);
+    dgx_set_call_timeout($conn, 120000);
+
+    $rows = [];
+    $day_ts = $to_ts;
+    while ($day_ts >= $from_ts) {
+        dgx_refresh_time_limit(300);
+        $day_label = date('Y-m-d', $day_ts);
+        $day_err = '';
+        $day_rows = oci_run_query($conn, dgx_custom_report_sql(), [
+            'P_FROM_DATE' => date('d/m/Y', $day_ts),
+            'P_TO_DATE' => date('d/m/Y', $day_ts),
+            'P_MAPOS' => $pos_codes !== '' ? $pos_codes : null,
+        ], $day_err);
+        if ($day_rows === null) {
+            if ($day_err !== '' && stripos($day_err, 'ORA-03156') !== false) {
+                $err = build_custom_report_timeout_message($day_label, $day_label, $pos_codes);
+            } else {
+                $err = $day_err !== '' ? $day_err : 'Lỗi truy vấn Oracle.';
+            }
+            return null;
+        }
+        if (!empty($day_rows)) {
+            $rows = array_merge($rows, $day_rows);
+        }
+        dgx_refresh_time_limit(300);
+        if ($day_ts === $from_ts) {
+            break;
+        }
+        $next_day_ts = strtotime('-1 day', $day_ts);
+        if ($next_day_ts === false || $next_day_ts === $day_ts) {
+            break;
+        }
+        $day_ts = $next_day_ts;
+    }
+
+    return $rows;
+}
+function build_custom_report_excel_filename(string $from_date, string $to_date): string
+{
+    return 'bao_cao_dgx_theo_yeu_cau_' . date('Ymd', strtotime($from_date)) . '_' . date('Ymd', strtotime($to_date)) . '.xlsx';
+}
 $index_url = '/dashboard/DGX/dgx.php';
 $keyword = trim((string)($_GET['keyword'] ?? ''));
 $from_date = normalize_date_input((string)($_GET['from_date'] ?? date('Y-m-d')));
@@ -120,6 +253,11 @@ if ($fixed_date_text === '') $fixed_date_text = date('d');
 $report_dgx_text = trim((string)($_GET['report_dgx'] ?? ''));
 $report_date_text = normalize_date_input((string)($_GET['report_date'] ?? $from_date));
 if ($report_date_text === '') $report_date_text = $from_date;
+$custom_report_from_date = normalize_date_input((string)($_GET['custom_from_date'] ?? $from_date));
+if ($custom_report_from_date === '') $custom_report_from_date = $from_date;
+$custom_report_to_date = normalize_date_input((string)($_GET['custom_to_date'] ?? $custom_report_from_date));
+if ($custom_report_to_date === '') $custom_report_to_date = $custom_report_from_date;
+$custom_report_pos_text = normalize_pos_codes_input((string)($_GET['custom_pos'] ?? ''));
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per_page = 40;
 $offset = ($page - 1) * $per_page;
@@ -331,6 +469,154 @@ if (isset($_GET['api']) && $_GET['api'] === 'report_excel') {
     exit;
 }
 
+if (isset($_GET['api']) && $_GET['api'] === 'custom_report_list') {
+    if (!isset($oracle_conn) || $oracle_conn === null) {
+        dgx_send_json_response(['ok' => false, 'message' => 'Chưa kết nối được Oracle.', 'rows' => []]);
+    }
+
+    $api_from_date = normalize_date_input((string)($_GET['custom_from_date'] ?? ''));
+    $api_to_date = normalize_date_input((string)($_GET['custom_to_date'] ?? ''));
+    $api_pos = normalize_pos_codes_input((string)($_GET['custom_pos'] ?? ''));
+
+    if ($api_from_date === '' || $api_to_date === '') {
+        dgx_send_json_response(['ok' => false, 'message' => 'Cần nhập đầy đủ từ ngày và đến ngày.', 'rows' => []]);
+    }
+    if (strtotime($api_from_date) === false || strtotime($api_to_date) === false || strtotime($api_from_date) > strtotime($api_to_date)) {
+        dgx_send_json_response(['ok' => false, 'message' => 'Khoảng ngày không hợp lệ.', 'rows' => []]);
+    }
+
+    $api_err = '';
+    $rows = get_custom_report_rows($oracle_conn, $api_from_date, $api_to_date, $api_pos, $api_err);
+    if ($rows === null) {
+        dgx_send_json_response(['ok' => false, 'message' => $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.', 'rows' => []]);
+    }
+
+    dgx_send_json_response([
+        'ok' => true,
+        'from_date' => date('d/m/Y', strtotime($api_from_date)),
+        'to_date' => date('d/m/Y', strtotime($api_to_date)),
+        'pos' => $api_pos,
+        'total' => count($rows),
+        'rows' => $rows,
+    ]);
+}
+if (isset($_GET['api']) && $_GET['api'] === 'custom_report_excel') {
+    if (!isset($oracle_conn) || $oracle_conn === null) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'Chưa kết nối được Oracle.';
+        exit;
+    }
+    if (!spreadsheet_library_available()) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'Thiếu thư viện PhpSpreadsheet để xuất Excel.';
+        exit;
+    }
+
+    $api_from_date = normalize_date_input((string)($_GET['custom_from_date'] ?? ''));
+    $api_to_date = normalize_date_input((string)($_GET['custom_to_date'] ?? ''));
+    $api_pos = normalize_pos_codes_input((string)($_GET['custom_pos'] ?? ''));
+
+    if ($api_from_date === '' || $api_to_date === '') {
+        http_response_code(400);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'Cần nhập đầy đủ từ ngày và đến ngày.';
+        exit;
+    }
+    if (strtotime($api_from_date) === false || strtotime($api_to_date) === false || strtotime($api_from_date) > strtotime($api_to_date)) {
+        http_response_code(400);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'Khoảng ngày không hợp lệ.';
+        exit;
+    }
+
+    $api_err = '';
+    $rows = get_custom_report_rows($oracle_conn, $api_from_date, $api_to_date, $api_pos, $api_err);
+    if ($rows === null) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo $api_err !== '' ? $api_err : 'Lỗi truy vấn Oracle.';
+        exit;
+    }
+
+    $filename = build_custom_report_excel_filename($api_from_date, $api_to_date);
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('BaoCaoYeuCau');
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(12);
+
+    $lastColumn = 'L';
+    $titleRow = 1;
+    $infoRow = 2;
+    $headerRow = 3;
+    $rowIndex = 4;
+    $from_label = date('d/m/Y', strtotime($api_from_date));
+    $to_label = date('d/m/Y', strtotime($api_to_date));
+    $reportTitle = 'BÁO CÁO DGX THEO YÊU CẦU TỪ ' . $from_label . ' ĐẾN ' . $to_label;
+    $filterNote = 'Mã POS: ' . ($api_pos !== '' ? str_replace(';', ', ', $api_pos) : 'Tất cả');
+
+    $sheet->mergeCells('A' . $titleRow . ':' . $lastColumn . $titleRow);
+    $sheet->setCellValue('A' . $titleRow, $reportTitle);
+    $sheet->getStyle('A' . $titleRow)->getFont()->setName('Times New Roman')->setBold(true)->setSize(16);
+    $sheet->getStyle('A' . $titleRow . ':' . $lastColumn . $titleRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet->getHeaderFooter()->setOddHeader('&C' . $reportTitle);
+
+    $sheet->mergeCells('A' . $infoRow . ':' . $lastColumn . $infoRow);
+    $sheet->setCellValue('A' . $infoRow, $filterNote);
+    $sheet->getStyle('A' . $infoRow)->getFont()->setName('Times New Roman')->setItalic(true)->setSize(12);
+    $sheet->getStyle('A' . $infoRow . ':' . $lastColumn . $infoRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+
+    $headers = ['NGÀY GIAO DỊCH XÃ', 'MÃ POS', 'TÊN GDV', 'ĐIỂM GDX', 'TỔ TN', 'SỐ KU', 'KH GN', 'SỐ TIỀN GN', 'KH TNCN', 'KH TKCKH', 'GỬI TK', 'RÚT TK'];
+    foreach ($headers as $i => $header) {
+        $sheet->setCellValueByColumnAndRow($i + 1, $headerRow, $header);
+    }
+    $sheet->getStyle('A' . $headerRow . ':' . $lastColumn . $headerRow)->getFont()->setName('Times New Roman')->setBold(true);
+    $sheet->getStyle('A' . $headerRow . ':' . $lastColumn . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet->freezePane('A' . $rowIndex);
+
+    foreach (range('A', $lastColumn) as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+
+    $dataStartRow = $rowIndex;
+    foreach ($rows as $row) {
+        $sheet->setCellValueByColumnAndRow(1, $rowIndex, (string)($row['NGAY_GIAO_DICH_XA'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(2, $rowIndex, (string)($row['MAPOS'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(3, $rowIndex, (string)($row['TEN_GDV'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(4, $rowIndex, (string)($row['DIEM_GDX'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(5, $rowIndex, normalize_excel_number($row['TO_TN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(6, $rowIndex, normalize_excel_number($row['SO_KU'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(7, $rowIndex, normalize_excel_number($row['KH_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(8, $rowIndex, normalize_excel_number($row['SOTIEN_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(9, $rowIndex, normalize_excel_number($row['KH_TNCN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(10, $rowIndex, normalize_excel_number($row['KH_TKCKH'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(11, $rowIndex, normalize_excel_number($row['GUITK'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(12, $rowIndex, normalize_excel_number($row['RUTTK'] ?? 0));
+        $rowIndex++;
+    }
+
+    $lastDataRow = $rowIndex - 1;
+    if ($lastDataRow >= $dataStartRow) {
+        foreach (['E', 'F', 'G', 'I', 'J'] as $column) {
+            $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)->getNumberFormat()->setFormatCode('[$-409]#,##0');
+        }
+        foreach (['H', 'K', 'L'] as $column) {
+            $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)->getNumberFormat()->setFormatCode('[$-42A]#,##0');
+        }
+        $sheet->getStyle('A' . $dataStartRow . ':B' . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('E' . $dataStartRow . ':' . $lastColumn . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+    }
+
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    if (ob_get_length()) ob_clean();
+    (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+    exit;
+}
 $rows = [];
 $dgx_codes_from_base = [];
 $total_rows = 0;
@@ -413,6 +699,7 @@ if ($page > 1) $canonical_params['page'] = $page;
         <input class="field-keyword" type="text" name="keyword" placeholder="Tìm theo mã PGD, tên POS, mã DGX, tên điểm" value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>">
         <input class="field-date" type="date" name="from_date" value="<?php echo htmlspecialchars($from_date, ENT_QUOTES, 'UTF-8'); ?>" title="Ngày GDX">
         <button type="button" class="btn-fixed-list" id="openFixedListBtn">Danh sách điểm cố định</button>
+        <button type="button" class="btn-custom-report" id="openCustomReportBtn">Báo cáo theo yêu cầu</button>
         <button type="submit" class="btn-search">Tìm kiếm</button>
     </form>
 
