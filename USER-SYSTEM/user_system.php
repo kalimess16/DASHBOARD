@@ -1,19 +1,7 @@
 <?php
-$sessionLifetime = 30 * 24 * 60 * 60;
-ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
-ini_set('session.cookie_lifetime', (string)$sessionLifetime);
-session_name('DASHBOARD_USER_SYSTEM_SESSID');
-$sessionCookieParams = session_get_cookie_params();
-session_set_cookie_params([
-    'lifetime' => $sessionLifetime,
-    'path' => '/dashboard',
-    'domain' => $sessionCookieParams['domain'] ?? '',
-    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
-    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
-    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
-]);
-session_start();
-
+require_once __DIR__ . '/../FUNC_SHARE/ham_dung_chung.php';
+dashboard_chan_ip_khong_hop_le();
+dashboard_khoi_tao_phien('DASHBOARD_USER_SYSTEM_SESSID');
 header('Content-Type: text/html; charset=UTF-8');
 require_once __DIR__ . '/../DB/connect_DB.php';
 require_once __DIR__ . '/user_system_sql.php';
@@ -43,17 +31,12 @@ if (function_exists('db_allow_protected_host_writes')) {
 
 function json_exit(array $payload): void
 {
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-    exit;
+    dashboard_phan_hoi_json($payload);
 }
 
 function normalize_text(string $value): string
 {
-    return trim(preg_replace('/\s+/', ' ', $value) ?? $value);
+    return dashboard_chuan_hoa_text($value);
 }
 
 
@@ -140,59 +123,12 @@ function user_system_row_matches_department(array $row, string $departmentCode):
 
 function db_fetch_assoc_rows(mysqli $conn, string $sql, array $binds = [], ?string &$err = null): ?array
 {
-    $stmt = db_mysqli_prepare($conn, $sql);
-    if ($stmt === false) {
-        $err = $conn->error !== '' ? $conn->error : 'Không prepare được SQL.';
-        return null;
-    }
-
-    $bind_vars = [];
-    if (!empty($binds)) {
-        $types = '';
-        foreach ($binds as $value) {
-            if (is_int($value)) {
-                $types .= 'i';
-            } elseif (is_float($value)) {
-                $types .= 'd';
-            } else {
-                $types .= 's';
-            }
-        }
-        foreach ($binds as $idx => $value) {
-            $bind_vars[$idx] = $value;
-        }
-        $params = [$types];
-        foreach ($bind_vars as &$ref) {
-            $params[] = &$ref;
-        }
-        unset($ref);
-        call_user_func_array([$stmt, 'bind_param'], $params);
-    }
-
-    if (!$stmt->execute()) {
-        $err = $stmt->error !== '' ? $stmt->error : 'Không execute được SQL.';
-        $stmt->close();
-        return null;
-    }
-    $result = $stmt->get_result();
-    $rows = [];
-    while ($result && ($row = $result->fetch_assoc())) {
-        $rows[] = $row;
-    }
-    if ($result) {
-        $result->close();
-    }
-    $stmt->close();
-    return $rows;
+    return dashboard_db_lay_danh_sach_assoc($conn, $sql, $binds, $err);
 }
 
 function db_fetch_one_assoc(mysqli $conn, string $sql, array $binds = [], ?string &$err = null): ?array
 {
-    $rows = db_fetch_assoc_rows($conn, $sql, $binds, $err);
-    if ($rows === null) {
-        return null;
-    }
-    return $rows[0] ?? [];
+    return dashboard_db_lay_mot_assoc($conn, $sql, $binds, $err);
 }
 
 function user_system_flash_set(string $message, string $type = 'info'): void
@@ -212,7 +148,7 @@ function user_system_flash_take(): array
 
 function user_system_text(string $value): string
 {
-    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    return dashboard_html($value);
 }
 
 function user_system_option_exists(array $rows, string $valueKey, string $selectedValue): bool

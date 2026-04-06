@@ -1,74 +1,63 @@
-﻿<?php
-// Keep read/unread state across browser restarts.
-$sessionLifetime = 30 * 24 * 60 * 60;
-ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
-ini_set('session.cookie_lifetime', (string)$sessionLifetime);
-session_name('DASHBOARD_VB_IOT_SESSID');
-$sessionCookieParams = session_get_cookie_params();
-session_set_cookie_params([
-    'lifetime' => $sessionLifetime,
-    'path' => '/dashboard',
-    'domain' => $sessionCookieParams['domain'] ?? '',
-    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
-    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
-    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
-]);
-session_start();
+<?php
+require_once __DIR__ . '/FUNC_SHARE/ham_dung_chung.php';
+dashboard_chan_ip_khong_hop_le();
+dashboard_khoi_tao_phien('DASHBOARD_VB_IOT_SESSID');
 require_once __DIR__ . '/DB/connect_DB.php';
 
-$docs_total = 0;
-$docs_unread = 0;
+$ketNoiDashboard = $conn ?? null;
+if (!$ketNoiDashboard instanceof mysqli) {
+    die('Khong ket noi duoc DB cho dashboard.');
+}
 
-$count_sql = "
+$danhSachMenu = dashboard_cau_hinh_menu();
+$thongTinChanTrang = dashboard_thong_tin_chan_trang();
+$docsTotal = 0;
+$docsUnread = 0;
+
+$countSql = "
     SELECT COUNT(*) AS total
     FROM eoffice_approval d
     WHERE EXISTS (SELECT 1 FROM eoffice_approval_file f WHERE f.maso = d.maso)
 ";
-$count_stmt = db_mysqli_prepare($conn, $count_sql);
-if ($count_stmt) {
-    $count_stmt->execute();
-    $docs_total = (int)($count_stmt->get_result()->fetch_assoc()['total'] ?? 0);
-    $count_stmt->close();
+$countStmt = db_mysqli_prepare($ketNoiDashboard, $countSql);
+if ($countStmt) {
+    $countStmt->execute();
+    $docsTotal = (int)($countStmt->get_result()->fetch_assoc()['total'] ?? 0);
+    $countStmt->close();
 }
 
-$read_docs = $_SESSION['read_docs'] ?? [];
-$read_docs = array_values(array_unique(array_map('intval', (array)$read_docs)));
-$read_docs = array_values(array_filter($read_docs, static function (int $id): bool {
+$readDocs = $_SESSION['read_docs'] ?? [];
+$readDocs = array_values(array_unique(array_map('intval', (array)$readDocs)));
+$readDocs = array_values(array_filter($readDocs, static function (int $id): bool {
     return $id > 0;
 }));
 
-$read_existing = 0;
-if (!empty($read_docs)) {
-    $placeholders = implode(',', array_fill(0, count($read_docs), '?'));
-    $read_sql = "
+$readExisting = 0;
+if (!empty($readDocs)) {
+    $placeholders = implode(',', array_fill(0, count($readDocs), '?'));
+    $readSql = "
         SELECT COUNT(*) AS total
         FROM eoffice_approval d
         WHERE EXISTS (SELECT 1 FROM eoffice_approval_file f WHERE f.maso = d.maso)
           AND d.maso IN ($placeholders)
     ";
-    $read_stmt = db_mysqli_prepare($conn, $read_sql);
-    if ($read_stmt) {
-        $types = str_repeat('i', count($read_docs));
-        $read_stmt->bind_param($types, ...$read_docs);
-        $read_stmt->execute();
-        $read_existing = (int)($read_stmt->get_result()->fetch_assoc()['total'] ?? 0);
-        $read_stmt->close();
+    $readStmt = db_mysqli_prepare($ketNoiDashboard, $readSql);
+    if ($readStmt) {
+        $types = str_repeat('i', count($readDocs));
+        $readStmt->bind_param($types, ...$readDocs);
+        $readStmt->execute();
+        $readExisting = (int)($readStmt->get_result()->fetch_assoc()['total'] ?? 0);
+        $readStmt->close();
     }
 }
-$docs_unread = max(0, $docs_total - $read_existing);
+$docsUnread = max(0, $docsTotal - $readExisting);
 
 if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
+    dashboard_phan_hoi_json([
         'ok' => true,
-        'unread' => $docs_unread,
-        'total' => $docs_total,
-    ], JSON_UNESCAPED_UNICODE);
-    $conn->close();
-    exit;
+        'unread' => $docsUnread,
+        'total' => $docsTotal,
+    ]);
 }
 ?>
 <!DOCTYPE html>
@@ -80,236 +69,277 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
 <link rel="stylesheet" href="view/style_Das.php">
 </head>
 <body>
-<div class="app">
-    <aside class="sidebar">
-        <div class="brand-dot" id="homeIcon" title="Dashboard">
-            <img src="/icon/VBSP.png" alt="Menu icon">
+<div class="page-shell">
+    <header class="page-header">
+        <div class="page-header__inner">
+            <button type="button" id="homeButton" class="brand-block" aria-label="Trang chủ dashboard">
+                <span class="brand-block__logo">
+                    <img src="/icon/VBSP.png" alt="Logo VBSP">
+                </span>
+                <span class="brand-block__text">
+                    <strong>PHỤC VỤ CHO CÔNG VIỆC CÁ NHÂN</strong>
+                </span>
+            </button>
+
+            <nav class="main-nav" aria-label="Menu chính dashboard">
+                <?php foreach ($danhSachMenu as $nhom): ?>
+                    <div class="nav-group" data-nav-group="<?php echo dashboard_html((string)($nhom['id'] ?? '')); ?>">
+                        <button type="button" class="nav-group__toggle" data-menu-toggle="<?php echo dashboard_html((string)($nhom['id'] ?? '')); ?>" aria-expanded="false">
+                            <span><?php echo dashboard_html((string)($nhom['nhan'] ?? '')); ?></span>
+                            <span class="nav-group__caret"></span>
+                        </button>
+                        <div class="nav-group__panel" id="menu-<?php echo dashboard_html((string)($nhom['id'] ?? '')); ?>">
+                            <?php foreach (($nhom['muc_con'] ?? []) as $mucCon): ?>
+                                <button
+                                    type="button"
+                                    class="nav-item"
+                                    data-feature-id="<?php echo dashboard_html((string)($mucCon['id'] ?? '')); ?>"
+                                    data-src="<?php echo dashboard_html((string)($mucCon['duong_dan'] ?? '')); ?>"
+                                    data-title="<?php echo dashboard_html((string)($mucCon['nhan'] ?? '')); ?>"
+                                    data-group-label="<?php echo dashboard_html((string)($nhom['nhan'] ?? '')); ?>"
+                                >
+                                    <span class="nav-item__body">
+                                        <strong><?php echo dashboard_html((string)($mucCon['nhan'] ?? '')); ?></strong>
+                                        <span><?php echo dashboard_html((string)($mucCon['mo_ta'] ?? '')); ?></span>
+                                    </span>
+                                    <?php if (!empty($mucCon['hien_huy_hieu'])): ?>
+                                        <span class="menu-badge" id="menuUnreadBadge"><?php echo number_format($docsUnread); ?></span>
+                                    <?php endif; ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </nav>
         </div>
-        <button id="menuDocs" class="icon-btn" title="Văn bản" aria-label="Văn bản">
-            📄
-            <span class="menu-badge" id="menuUnreadBadge"><?php echo number_format($docs_unread); ?></span>
-            <span class="tooltip">Văn bản</span>
-        </button>
-        <button id="menuDgx" class="icon-btn" title="Điểm DGX" aria-label="Điểm DGX">
-            🏠
-            <span class="tooltip">Điểm DGX</span>
-        </button>
-        <button id="menuHomePage" class="icon-btn" title="Tổng hợp dư nợ" aria-label="Tổng hợp dư nợ">
-            📊
-            <span class="tooltip">Tổng hợp dư nợ</span>
-        </button>
-        <button id="menuUserSystem" class="icon-btn" title="Quản lý user" aria-label="Quản lý user">
-            👥
-            <span class="tooltip">Quản lý user</span>
-        </button>
-    </aside>
+    </header>
 
-    <main class="main">
-        <section class="header">
-            <h1><a href="#" id="homeLink" class="home-link">Dashboard Cá Nhân</a></h1>
-        </section>
-
-        <section class="content">
+    <main class="page-main">
+        <section class="workspace-card">
             <div id="placeholder" class="placeholder">
-                <div>
-                    <div class="logo-wrap">
+                <div class="placeholder__glow"></div>
+                <div class="placeholder__content">
+                    <div class="placeholder__logo">
                         <img src="/icon/VBSP.png" alt="Logo VBSP">
                     </div>
-                    <strong>Bạn chưa mở chức năng</strong>
-                    Bấm icon chức năng ở menu bên trái để mở chức năng.
+                    <p class="placeholder__tagline">Thấu hiểu lòng dân - Tận tâm phục vụ</p>
+                    <p class="placeholder__note">Chọn một menu phía trên để mở chức năng tương ứng trong cùng khung làm việc.</p>
                 </div>
             </div>
-            <iframe id="contentFrame" src="about:blank" title="Nội dung chính"></iframe>
+
+            <iframe id="contentFrame" src="about:blank" title="Nội dung dashboard"></iframe>
         </section>
     </main>
+
+    <footer class="page-footer">
+        <div class="footer-block footer-block--wide">
+            <span class="footer-label">Người tạo: <?php echo dashboard_html($thongTinChanTrang['nguoi_tao']); ?></span>
+        </div>
+    </footer>
 </div>
 
 <script>
 (function () {
-    var menuDocs = document.getElementById('menuDocs');
-    var menuDgx = document.getElementById('menuDgx');
-    var menuHomePage = document.getElementById('menuHomePage');
-    var menuUserSystem = document.getElementById('menuUserSystem');
-    var homeLink = document.getElementById('homeLink');
-    var homeIcon = document.getElementById('homeIcon');
-    var frame = document.getElementById('contentFrame');
-    var placeholder = document.getElementById('placeholder');
-    var unreadBadge = document.getElementById('menuUnreadBadge');
-    var unreadFetchInFlight = false;
-    var unreadLastFetchAt = 0;
-    var unreadThrottleMs = 500;
+    var khungNoiDung = document.getElementById('contentFrame');
+    var khoiCho = document.getElementById('placeholder');
+    var nutThuongHieu = document.getElementById('homeButton');
+    var nutMenuCon = Array.prototype.slice.call(document.querySelectorAll('.nav-item'));
+    var nutMoNhom = Array.prototype.slice.call(document.querySelectorAll('[data-menu-toggle]'));
+    var huyHieuMenu = document.getElementById('menuUnreadBadge');
+    var dangTaiSoChuaDoc = false;
+    var lanTaiGanNhat = 0;
+    var doTreTai = 500;
+    var khungLamViec = document.querySelector('.workspace-card');
 
-    function openDocs() {
-        menuDocs.classList.add('active');
-        if (menuDgx) {
-            menuDgx.classList.remove('active');
-        }
-        if (menuHomePage) {
-            menuHomePage.classList.remove('active');
-        }
-        if (menuUserSystem) {
-            menuUserSystem.classList.remove('active');
-        }
-        placeholder.style.display = 'none';
-        frame.style.display = 'block';
-        if (!frame.src || frame.src.indexOf('VB_IOT/vb_iot.php') === -1) {
-            frame.src = 'VB_IOT/vb_iot.php';
-        }
+    function dongTatCaMenu(idDangMo) {
+        nutMoNhom.forEach(function (nut) {
+            var idNhom = nut.getAttribute('data-menu-toggle');
+            var nhom = nut.closest('.nav-group');
+            var dangMo = idDangMo && idNhom === idDangMo;
+            if (nhom) {
+                nhom.classList.toggle('is-open', !!dangMo);
+            }
+            nut.setAttribute('aria-expanded', dangMo ? 'true' : 'false');
+        });
     }
 
-    function openDgx() {
-        if (menuDgx) {
-            menuDgx.classList.add('active');
-        }
-        menuDocs.classList.remove('active');
-        if (menuHomePage) {
-            menuHomePage.classList.remove('active');
-        }
-        if (menuUserSystem) {
-            menuUserSystem.classList.remove('active');
-        }
-        placeholder.style.display = 'none';
-        frame.style.display = 'block';
-        if (!frame.src || frame.src.indexOf('DGX/dgx.php') === -1) {
-            frame.src = 'DGX/dgx.php';
-        }
+    function datChucNangDangChon(idChucNang) {
+        nutMenuCon.forEach(function (nut) {
+            var trung = nut.getAttribute('data-feature-id') === idChucNang;
+            nut.classList.toggle('is-active', trung);
+        });
     }
-    function openHomePage() {
-        if (menuHomePage) {
-            menuHomePage.classList.add('active');
+
+    function layChieuCaoKhungLamViec() {
+        if (!khungLamViec) {
+            return 420;
         }
-        menuDocs.classList.remove('active');
-        if (menuDgx) {
-            menuDgx.classList.remove('active');
+
+        return Math.max(360, Math.floor(khungLamViec.getBoundingClientRect().height));
+    }
+
+    function dongBoChieuCaoKhungNoiDung() {
+        var chieuCao = layChieuCaoKhungLamViec();
+        if (khungNoiDung) {
+            khungNoiDung.style.height = chieuCao + 'px';
         }
-        if (menuUserSystem) {
-            menuUserSystem.classList.remove('active');
-        }
-        placeholder.style.display = 'none';
-        frame.style.display = 'block';
-        if (!frame.src || frame.src.indexOf('HOME_PAGE/home_page.php') === -1) {
-            frame.src = 'HOME_PAGE/home_page.php';
+        if (khoiCho) {
+            khoiCho.style.minHeight = chieuCao + 'px';
         }
     }
 
-    function openUserSystem() {
-        if (menuUserSystem) {
-            menuUserSystem.classList.add('active');
-        }
-        menuDocs.classList.remove('active');
-        if (menuDgx) {
-            menuDgx.classList.remove('active');
-        }
-        if (menuHomePage) {
-            menuHomePage.classList.remove('active');
-        }
-        placeholder.style.display = 'none';
-        frame.style.display = 'block';
-        if (!frame.src || frame.src.indexOf('USER-SYSTEM/user_system.php') === -1) {
-            frame.src = 'USER-SYSTEM/user_system.php';
-        }
+    function datChieuCaoMacDinh() {
+        dongBoChieuCaoKhungNoiDung();
     }
 
-    function goHome(e) {
-        if (e) {
-            e.preventDefault();
-        }
-        menuDocs.classList.remove('active');
-        if (menuDgx) {
-            menuDgx.classList.remove('active');
-        }
-        if (menuHomePage) {
-            menuHomePage.classList.remove('active');
-        }
-        if (menuUserSystem) {
-            menuUserSystem.classList.remove('active');
-        }
-        frame.style.display = 'none';
-        frame.src = 'about:blank';
-        placeholder.style.display = 'grid';
+    function huyTheoDoiChieuCao() {
+        return;
     }
 
-    menuDocs.addEventListener('click', openDocs);
-    if (menuDgx) {
-        menuDgx.addEventListener('click', openDgx);
-    }
-    if (menuHomePage) {
-        menuHomePage.addEventListener('click', openHomePage);
-    }
-    if (menuUserSystem) {
-        menuUserSystem.addEventListener('click', openUserSystem);
-    }
-    if (homeLink) {
-        homeLink.addEventListener('click', goHome);
-    }
-    if (homeIcon) {
-        homeIcon.addEventListener('click', goHome);
-    }
-    if (frame) {
-        frame.addEventListener('load', refreshUnreadBadge);
-    }
-    window.addEventListener('message', function (event) {
-        if (!event) {
-            return;
-        }
-        if (event.data === 'vb_iot:refresh_unread') {
-            refreshUnreadBadge();
-            return;
-        }
-        if (event.data && event.data.type === 'vb_iot:unread_count') {
-            setUnreadBadge(event.data.unread);
-        }
-    });
-    document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) {
-            refreshUnreadBadge();
-        }
-    });
-    window.addEventListener('focus', refreshUnreadBadge);
-
-    function setUnreadBadge(value) {
-        if (!unreadBadge) {
-            return;
-        }
-        var n = Number(value);
-        if (!isFinite(n) || n < 0) {
-            return;
-        }
-        unreadBadge.textContent = String(Math.floor(n));
+    function caiTheoDoiChieuCao() {
+        dongBoChieuCaoKhungNoiDung();
     }
 
-    function refreshUnreadBadge() {
-        if (!unreadBadge) {
+    function lapLichDongBoChieuCao() {
+        [0, 80, 180].forEach(function (delay) {
+            window.setTimeout(dongBoChieuCaoKhungNoiDung, delay);
+        });
+    }
+
+    function veTrangChu(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        huyTheoDoiChieuCao();
+        if (khungNoiDung) {
+            khungNoiDung.src = 'about:blank';
+            khungNoiDung.style.display = 'none';
+            datChieuCaoMacDinh();
+        }
+        if (khoiCho) {
+            khoiCho.style.display = 'grid';
+        }
+        datChucNangDangChon('');
+        dongTatCaMenu('');
+    }
+
+    function capNhatHuyHieu(value) {
+        var so = Number(value);
+        if (!isFinite(so) || so < 0 || !huyHieuMenu) {
             return;
         }
-        var now = Date.now();
-        if (unreadFetchInFlight) {
+        huyHieuMenu.textContent = String(Math.floor(so));
+    }
+
+    function moNoiDung(nutBam) {
+        if (!nutBam || !khungNoiDung || !khoiCho) {
             return;
         }
-        if (now - unreadLastFetchAt < unreadThrottleMs) {
+        var duongDan = nutBam.getAttribute('data-src') || '';
+        var idChucNang = nutBam.getAttribute('data-feature-id') || '';
+
+        if (duongDan === '') {
             return;
         }
-        unreadFetchInFlight = true;
-        unreadLastFetchAt = now;
+
+        khoiCho.style.display = 'none';
+        khungNoiDung.style.display = 'block';
+        datChieuCaoMacDinh();
+        if (!khungNoiDung.src || khungNoiDung.src.indexOf(duongDan) === -1) {
+            khungNoiDung.src = duongDan;
+        }
+        datChucNangDangChon(idChucNang);
+        dongTatCaMenu('');
+        lapLichDongBoChieuCao();
+    }
+
+    function taiSoVanBanChuaDoc() {
+        if (!huyHieuMenu) {
+            return;
+        }
+        var hienTai = Date.now();
+        if (dangTaiSoChuaDoc || hienTai - lanTaiGanNhat < doTreTai) {
+            return;
+        }
+        dangTaiSoChuaDoc = true;
+        lanTaiGanNhat = hienTai;
+
         fetch('index.php?api=unread_count&_t=' + Date.now(), { cache: 'no-store' })
             .then(function (res) { return res.ok ? res.json() : null; })
             .then(function (data) {
                 if (!data || data.ok !== true || typeof data.unread === 'undefined') {
                     return;
                 }
-                setUnreadBadge(data.unread);
+                capNhatHuyHieu(data.unread);
             })
             .catch(function () {})
             .finally(function () {
-                unreadFetchInFlight = false;
+                dangTaiSoChuaDoc = false;
             });
     }
 
-    refreshUnreadBadge();
+    nutMoNhom.forEach(function (nut) {
+        nut.addEventListener('click', function () {
+            var idNhom = nut.getAttribute('data-menu-toggle') || '';
+            var nhom = nut.closest('.nav-group');
+            var dangMo = nhom && nhom.classList.contains('is-open');
+            dongTatCaMenu(dangMo ? '' : idNhom);
+        });
+    });
+
+    nutMenuCon.forEach(function (nut) {
+        nut.addEventListener('click', function () {
+            moNoiDung(nut);
+        });
+    });
+
+    document.addEventListener('click', function (event) {
+        var namTrongMenu = event.target && event.target.closest('.nav-group');
+        if (!namTrongMenu) {
+            dongTatCaMenu('');
+        }
+    });
+
+    if (nutThuongHieu) {
+        nutThuongHieu.addEventListener('click', veTrangChu);
+    }
+    if (khungNoiDung) {
+        khungNoiDung.addEventListener('load', function () {
+            taiSoVanBanChuaDoc();
+            lapLichDongBoChieuCao();
+            caiTheoDoiChieuCao();
+        });
+    }
+
+    window.addEventListener('message', function (event) {
+        if (!event) {
+            return;
+        }
+        if (event.data === 'vb_iot:refresh_unread') {
+            taiSoVanBanChuaDoc();
+            lapLichDongBoChieuCao();
+            return;
+        }
+        if (event.data && event.data.type === 'vb_iot:unread_count') {
+            capNhatHuyHieu(event.data.unread);
+        }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) {
+            taiSoVanBanChuaDoc();
+            lapLichDongBoChieuCao();
+        }
+    });
+    window.addEventListener('focus', function () {
+        taiSoVanBanChuaDoc();
+        lapLichDongBoChieuCao();
+    });
+    window.addEventListener('resize', dongBoChieuCaoKhungNoiDung);
+
+    datChieuCaoMacDinh();
+    taiSoVanBanChuaDoc();
 })();
 </script>
 </body>
 </html>
-
-
-

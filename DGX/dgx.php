@@ -1,18 +1,7 @@
 <?php
-$sessionLifetime = 30 * 24 * 60 * 60;
-ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
-ini_set('session.cookie_lifetime', (string)$sessionLifetime);
-session_name('DASHBOARD_VB_IOT_SESSID');
-$sessionCookieParams = session_get_cookie_params();
-session_set_cookie_params([
-    'lifetime' => $sessionLifetime,
-    'path' => '/dashboard',
-    'domain' => $sessionCookieParams['domain'] ?? '',
-    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
-    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
-    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
-]);
-session_start();
+require_once __DIR__ . '/../FUNC_SHARE/ham_dung_chung.php';
+dashboard_chan_ip_khong_hop_le();
+dashboard_khoi_tao_phien('DASHBOARD_VB_IOT_SESSID');
 header('Content-Type: text/html; charset=UTF-8');
 require_once __DIR__ . '/../DB/connect_DB.php';
 require_once __DIR__ . '/dgx_sql.php';
@@ -27,13 +16,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 
 function normalize_date_input(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') return '';
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) return $value;
-    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $value, $m) === 1) {
-        return $m[3] . '-' . $m[2] . '-' . $m[1];
-    }
-    return '';
+    return dashboard_chuan_hoa_ngay($value);
 }
 
 function normalize_dgx_codes_input(string $value): string

@@ -1,22 +1,10 @@
 <?php
-$sessionLifetime = 30 * 24 * 60 * 60;
-ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
-ini_set('session.cookie_lifetime', (string)$sessionLifetime);
-session_name('DASHBOARD_VB_IOT_SESSID');
-$sessionCookieParams = session_get_cookie_params();
-session_set_cookie_params([
-    'lifetime' => $sessionLifetime,
-    'path' => '/dashboard',
-    'domain' => $sessionCookieParams['domain'] ?? '',
-    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
-    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
-    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
-]);
-session_start();
+require_once __DIR__ . '/../FUNC_SHARE/ham_dung_chung.php';
+dashboard_chan_ip_khong_hop_le();
+dashboard_khoi_tao_phien('DASHBOARD_VB_IOT_SESSID');
 ini_set('default_socket_timeout', '6');
 @set_time_limit(60);
 header('Content-Type: text/html; charset=UTF-8');
-
 require_once __DIR__ . '/../DB/connect_DB.php';
 require_once __DIR__ . '/home_page_sql.php';
 
@@ -25,17 +13,7 @@ const HOME_PAGE_DEFAULT_SOURCE = 'ALL';
 
 function chuan_hoa_ngay(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
-        return $value;
-    }
-    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $value, $m) === 1) {
-        return $m[3] . '-' . $m[2] . '-' . $m[1];
-    }
-    return '';
+    return dashboard_chuan_hoa_ngay($value);
 }
 
 function ngay_bao_cao_mac_dinh(): string
@@ -83,37 +61,7 @@ function ep_kieu_so($value): float
 
 function oracle_chay_truy_van($conn, string $sql, array $binds = [], ?string &$err = null): ?array
 {
-    $stmt = db_oci_parse($conn, $sql);
-    if ($stmt === false) {
-        $e = oci_error($conn);
-        $err = $e['message'] ?? 'Lỗi phân tích câu lệnh Oracle hoặc câu SQL ghi bị chặn';
-        return null;
-    }
-
-    $bindVars = [];
-    foreach ($binds as $name => $value) {
-        $bindVars[$name] = $value;
-        if (@oci_bind_by_name($stmt, ':' . $name, $bindVars[$name]) === false) {
-            $e = oci_error($stmt);
-            $err = $e['message'] ?? 'Lỗi bind tham số Oracle';
-            oci_free_statement($stmt);
-            return null;
-        }
-    }
-
-    if (@oci_execute($stmt, OCI_NO_AUTO_COMMIT) === false) {
-        $e = oci_error($stmt);
-        $err = $e['message'] ?? 'Lỗi thực thi câu lệnh Oracle';
-        oci_free_statement($stmt);
-        return null;
-    }
-
-    $rows = [];
-    while (($row = oci_fetch_assoc($stmt)) !== false) {
-        $rows[] = $row;
-    }
-    oci_free_statement($stmt);
-    return $rows;
+    return dashboard_oracle_chay_truy_van($conn, $sql, $binds, $err);
 }
 
 function lap_chi_tiet_theo_don_vi(array $rows, string $codeField, string $nameField): array

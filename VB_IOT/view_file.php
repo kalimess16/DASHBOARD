@@ -1,19 +1,7 @@
-﻿<?php
-// Keep read/unread state across browser restarts.
-$sessionLifetime = 30 * 24 * 60 * 60;
-ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
-ini_set('session.cookie_lifetime', (string)$sessionLifetime);
-session_name('DASHBOARD_VB_IOT_SESSID');
-$sessionCookieParams = session_get_cookie_params();
-session_set_cookie_params([
-    'lifetime' => $sessionLifetime,
-    'path' => '/dashboard',
-    'domain' => $sessionCookieParams['domain'] ?? '',
-    'secure' => (bool)($sessionCookieParams['secure'] ?? false),
-    'httponly' => (bool)($sessionCookieParams['httponly'] ?? true),
-    'samesite' => $sessionCookieParams['samesite'] ?? 'Lax',
-]);
-session_start();
+<?php
+require_once __DIR__ . '/../FUNC_SHARE/ham_dung_chung.php';
+dashboard_chan_ip_khong_hop_le();
+dashboard_khoi_tao_phien('DASHBOARD_VB_IOT_SESSID');
 require_once __DIR__ . '/../DB/connect_DB.php';
 
 function normalize_mime(?string $mime, ?string $file_name): string

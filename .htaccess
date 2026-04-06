@@ -1,9 +1,19 @@
-﻿RewriteEngine On
+SetEnvIfNoCase Remote_Addr "^10\.64\.0\.108$" dashboard_allowed_ip=1
+SetEnvIfNoCase X-Forwarded-For "(^|,\s*)10\.64\.0\.108(,|$)" dashboard_allowed_ip=1
+
+<IfModule mod_authz_core.c>
+    Require env dashboard_allowed_ip
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order Deny,Allow
+    Deny from all
+    Allow from env=dashboard_allowed_ip
+</IfModule>
+
+RewriteEngine On
 
 # Pretty URL for inline file viewer
 RewriteRule ^file/([0-9]+)/([^/]+)\.pdf$ VB_IOT/view_file.php?id=$1&raw=1 [L,QSA,NC]
 
 # Internally map index.html to index.php (no external redirect)
 RewriteRule ^index\.html$ index.php [L,QSA,NC]
-
-

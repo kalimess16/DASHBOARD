@@ -45,15 +45,21 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: index.php 
+- Mục tiêu: khắc phục lỗi/ edit trang chính
 - Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
-- Ghi chú thêm:
+    + tôi muốn phần helder nhỏ lại
+    + cở chữ cũng nhỏ lại đi 30%
+    + vần body thì khi load chức năng thì không nên kéo quá dài. auto to khung màng hình
+    + heder vs body tôi không muốn có khoảng trắng
+- Không được đụng vào: c
+- Kết quả mong muốn: xử lý các lỗi trên
+- Cách kiểm tra: vào web là thấy
+- Ghi chú thêm: + đọc qua các .md 
+    + nếu cần thì bổ sung vào md
+    + có thể chỉnh sửa lại sytle
 
 ## CODE-ORCALE_SQL
 
@@ -166,8 +172,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 ## FUNC_SHARE
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: Toàn bộ dự án có trong project
 - Mục tiêu: bổ sung tính năng/ gom dữ liệu / thiết kế lại menu
 - Yêu cầu chi tiết:
@@ -195,8 +201,8 @@ Sao chép khối này khi bạn tạo thư mục mới:
 ## FUNC_SHARE
 
 ### Task
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: Toàn bộ dự án có trong project
 - Mục tiêu: bổ sung tính năng/ gom dữ liệu / thiết kế lại menu
 - Yêu cầu chi tiết:
@@ -218,19 +224,3 @@ Sao chép khối này khi bạn tạo thư mục mới:
             
 ```
 
-## Ví dụ nhanh
-
-```md
-## DGX
-
-### Task
-- Trạng thái: 
-- Ưu tiên: Cao
-- File liên quan: DGX/dgx.php, DGX/dgx_sql.php
-- Mục tiêu: Thêm bộ lọc theo ngày cho màn hình DGX
-- Yêu cầu chi tiết: Thêm 2 ô từ ngày/đến ngày, lọc dữ liệu khi bấm tìm kiếm, giữ lại giá trị sau khi submit
-- Không được đụng vào: Xuất Excel hiện tại
-- Kết quả mong muốn: Người dùng lọc được dữ liệu theo khoảng ngày ngay trên màn hình DGX
-- Cách kiểm tra: Mở DGX, nhập khoảng ngày, bấm tìm kiếm, kiểm tra dữ liệu thay đổi đúng
-- Ghi chú thêm: Nếu cần sửa CSS thì cập nhật ở view/Style_dgx.php
-```
