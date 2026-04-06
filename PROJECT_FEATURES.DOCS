@@ -1,0 +1,755 @@
+﻿# Tai lieu tong hop tinh nang project Dashboard
+
+Ngay tong hop: 2026-04-02
+
+Pham vi doc va tong hop:
+- Da doc toan bo ma nguon ung dung first-party trong `c:\xampp\htdocs\dashboard`.
+- Khong phan tich chi tiet `vendor/`, chi ghi nhan thu vien phu thuoc va vai tro.
+- Cac file backup nhu `VB_IOT/vb_iot_tmp_backup.php` va `USER-SYSTEM/user_system.php.bak-20260323-vi` khong phai diem vao chinh, chi la ban luu.
+
+## 1. Tong quan project
+
+Day la mot dashboard PHP chay tren XAMPP, su dung:
+- MySQL nguon de doc du lieu van ban va mot so bang he thong.
+- MySQL local de luu kho luu tru van ban phan loai.
+- Oracle de lay bao cao DGX va du lieu tong hop du no.
+- `PhpSpreadsheet` de xuat Excel cho module DGX.
+
+Project co 4 module nghiep vu chinh duoc mo ben trong `iframe` tu `index.php`:
+- `VB_IOT`: danh sach van ban, doc van ban, danh dau da doc, luu tru local.
+- `DGX`: tong hop diem giao dich xa, bao cao DGX, danh sach diem co dinh, xuat Excel.
+- `HOME_PAGE`: dashboard tong hop du no theo POS / Xa va nguon von.
+- `USER-SYSTEM`: quan ly can bo, loc danh sach, xem chi tiet, them moi, cap nhat.
+
+Ngoai 4 module tren, project con co:
+- Lop ket noi DB dung chung trong `DB/connect_DB.php`.
+- Cac endpoint CSS trong thu muc `view/`.
+- Script Oracle trong `CODE-ORCALE_SQL/`.
+- Rewrite URL trong `.htaccess`.
+
+## 2. Cau truc thu muc va vai tro
+
+- `index.php`
+  Trang shell cua toan dashboard. Chiu trach nhiem hien menu trai, mo module trong `iframe`, va cap nhat badge van ban chua doc.
+
+- `DB/connect_DB.php`
+  Lop ket noi MySQL/Oracle dung chung. Co fallback MySQL source -> local, co guard chan lenh ghi vao host nhay cam.
+
+- `VB_IOT/`
+  Module van ban. Gom trang danh sach, SQL helper, endpoint xem file, va file backup.
+
+- `DGX/`
+  Module DGX. Gom trang chinh, SQL helper, layout popup bao cao, ghi chu module.
+
+- `HOME_PAGE/`
+  Module dashboard tong hop du no. Gom trang chinh, SQL helper, ghi chu module.
+
+- `USER-SYSTEM/`
+  Module quan ly can bo. Gom trang danh sach/chinh sua, trang them moi, SQL helper, ghi chu module.
+
+- `view/`
+  Cac endpoint CSS dong cho shell va tung module:
+  - `style_Das.php`
+  - `Styple_vb_iot.php`
+  - `Style_dgx.php`
+  - `Style_home_page.php`
+  - `Style_user_system.php`
+
+- `CODE-ORCALE_SQL/`
+  Chua thu tuc Oracle `CODE.SQL`, ghi chu encoding, va mot truy van mau `KT740.txt`.
+
+- `composer.json`, `composer.lock`, `vendor/`
+  Quan ly thu vien PHP. Hien tai project dung `phpoffice/phpspreadsheet`.
+
+- `index.html`
+  Redirect client-side sang `index.php`.
+
+- `.htaccess`
+  Rewrite pretty URL cho xem file PDF va map `index.html` -> `index.php`.
+
+## 3. Luong chay tong the
+
+1. Nguoi dung vao `index.php`.
+2. `index.php` khoi tao session va tinh so van ban chua doc dua tren `$_SESSION['read_docs']`.
+3. Khi bam icon ben trai, dashboard mo module tuong ung trong `iframe`.
+4. Moi module tu tai du lieu tu MySQL hoac Oracle.
+5. Rieng `VB_IOT` co co che postMessage de bao `index.php` cap nhat badge chua doc sau khi mo van ban.
+
+## 4. Tinh nang theo tung module
+
+### 4.1. Dashboard shell (`index.php`)
+
+Tinh nang:
+- Hien sidebar chua 4 icon chuc nang: Van ban, DGX, Tong hop du no, Quan ly user.
+- Hien placeholder khi chua mo module.
+- Mo noi dung module ben trong `iframe`.
+- Tinh va cap nhat so van ban chua doc.
+- Co API nho `index.php?api=unread_count` tra ve JSON:
+  - `ok`
+  - `unread`
+  - `total`
+
+Bang/du lieu lien quan:
+- `eoffice_approval`
+- `eoffice_approval_file`
+- `$_SESSION['read_docs']`
+
+Ham/JS can nam:
+- `openDocs()`: mo `VB_IOT/vb_iot.php`.
+- `openDgx()`: mo `DGX/dgx.php`.
+- `openHomePage()`: mo `HOME_PAGE/home_page.php`.
+- `openUserSystem()`: mo `USER-SYSTEM/user_system.php`.
+- `goHome(e)`: dong `iframe`, quay ve placeholder.
+- `setUnreadBadge(value)`: cap nhat badge.
+- `refreshUnreadBadge()`: goi API unread_count va dong bo badge.
+
+### 4.2. Module VB_IOT (`VB_IOT/vb_iot.php`, `VB_IOT/vb_iot_sql.php`, `VB_IOT/view_file.php`)
+
+Muc dich:
+- Doc danh sach van ban tu he thong nguon.
+- Tim kiem va loc theo thoi gian.
+- Danh dau da doc/chua doc theo session.
+- Xem danh sach nguoi nhan van ban.
+- Mo file van ban inline.
+- Luu file van ban sang kho local theo phan loai.
+- Xem danh sach file da luu trong kho local.
+
+Tinh nang nguoi dung:
+- Tim theo tieu de hoac ky hieu van ban.
+- Tim theo ma so van ban (`doc_no`).
+- Loc ngay theo 4 che do:
+  - Khoang ngay (`range`)
+  - Theo nam (`year`)
+  - Theo thang (`month`)
+  - Tat ca (`all`)
+- Danh dau da doc trang hien tai.
+- Danh dau da doc tat ca cac trang theo dieu kien loc.
+- Reset da doc cho trang hien tai.
+- Loc nhanh trong bang hien tai bang JavaScript.
+- Mo popup nguoi nhan.
+- Mo popup luu tru local.
+- Mo popup danh sach luu tru local theo phan loai.
+
+API/action backend:
+- `?api=archive_types`
+  Doc danh sach phan loai tu bang `classify` trong local DB.
+- `?api=archive_save` (POST)
+  Lay file tu MySQL nguon va luu vao local DB `save_eoffice`.
+- `?api=archive_list&maPl=...`
+  Tra ve danh sach file da luu theo ma phan loai.
+- `?api=archive_raw&maso=...&maPl=...`
+  Xuat file raw tu local DB de xem/truyen file inline.
+- `mark_all_read=1`
+  Danh dau da doc toan bo dong trong trang hien tai.
+- `mark_all_pages_read=1`
+  Danh dau da doc toan bo dong o tat ca trang theo bo loc.
+- `reset_read=1`
+  Xoa trang thai da doc cua trang hien tai.
+
+Bang du lieu phu thuoc:
+- MySQL nguon:
+  - `eoffice_approval`
+  - `eoffice_approval_file`
+  - `eoffice_approval_receiver`
+  - `user`
+- MySQL local (`dashboard_my`):
+  - `classify`
+  - `save_eoffice`
+
+Co che quan trong:
+- Tu dong tao local DB `dashboard_my` neu chua ton tai.
+- Tang `max_allowed_packet` phien local de luu BLOB lon.
+- Dung `GET_LOCK/RELEASE_LOCK` de tranh 2 request cung luu 1 file.
+- Ghi BLOB theo chunk bang `append_blob_chunks()` de giam loi packet.
+- Giu trang thai da doc trong session 30 ngay.
+- Giu `index_return_url` de quay lai dung danh sach sau khi mo van ban.
+
+Ham backend can nam trong `VB_IOT/vb_iot.php`:
+- `normalize_date_input()`: chuan hoa ngay vao.
+- `json_exit()`: tra JSON va ket thuc request.
+- `open_local_dashboard_conn()`: mo ket noi local DB, co the tao DB neu thieu.
+- `fetch_archive_types()`: doc danh sach phan loai.
+- `append_blob_chunks()`: ghi BLOB vao `save_eoffice` theo chunk.
+- `archive_lock_name()`: tao ten lock theo `maSo + maPl`.
+- `acquire_archive_lock()`: xin lock MySQL.
+- `release_archive_lock()`: nhat lock MySQL.
+
+Ham SQL can nam trong `VB_IOT/vb_iot_sql.php`:
+- `vb_iot_year_options_sql()`: lay nam co du lieu.
+- `vb_iot_mark_page_sql()`: lay danh sach `maso` cua 1 trang.
+- `vb_iot_mark_all_pages_sql()`: lay danh sach `maso` cua tat ca trang.
+- `vb_iot_count_sql()`: dem tong so van ban theo bo loc.
+- `vb_iot_list_sql()`: lay danh sach van ban theo bo loc + paging.
+- `vb_iot_receiver_sql()`: lay danh sach nguoi nhan.
+- `vb_iot_read_filter_sql()`: dem so van ban da doc trong bo loc hien tai.
+- `vb_iot_source_file_sql()`: lay file goc de luu local.
+- `vb_iot_archive_exists_sql()`: kiem tra ban ghi local theo khoa.
+- `vb_iot_archive_delete_by_key_sql()`: xoa ban ghi trung truoc khi luu lai.
+- `vb_iot_archive_update_sql()`: cap nhat ban ghi local.
+- `vb_iot_archive_insert_sql()`: insert ban ghi local.
+- `vb_iot_archive_list_sql()`: liet ke file local theo phan loai.
+- `vb_iot_archive_raw_sql()`: lay noi dung file local.
+
+Ham backend can nam trong `VB_IOT/view_file.php`:
+- `normalize_mime()`: suy ra MIME type hop le.
+- `build_display_title()`: tao ten hien thi/file name an toan.
+
+Ham frontend noi bat:
+- `toggleDateFilters()`: an/hien bo loc ngay/nam/thang.
+- `applyQuickFilter()`: loc nhanh trong bang van ban.
+- `openOverlay(docId, docSymbol)` o popup nguoi nhan: mo danh sach nguoi nhan.
+- `loadTypes(selectedValue)`: tai danh sach phan loai local.
+- `saveArchive()`: gui request luu van ban vao local.
+- `loadArchiveList()`: tai danh sach file da luu theo phan loai.
+- `applyArchiveQuickFilter()`: loc nhanh trong danh sach luu tru.
+- `startDrag() / onDragMove() / stopDrag()`: keo-tha popup luu tru.
+
+### 4.3. Module DGX (`DGX/dgx.php`, `DGX/dgx_sql.php`, `DGX/dgx_report_layout.php`)
+
+Muc dich:
+- Xem danh sach diem giao dich xa da dong bo.
+- Loc nhanh theo ma PGD, ten POS, ma DGX, ten diem, ngay.
+- Xem danh sach diem co dinh.
+- Xem bao cao DGX theo ngay va ma DGX.
+- Xem bao cao theo yeu cau theo khoang ngay va danh sach POS.
+- Xuat 2 loai Excel.
+
+Tinh nang nguoi dung:
+- Tim kiem tren danh sach DGX chinh.
+- Loc nhanh trong trang bang client-side.
+- Popup `Danh sach diem co dinh`.
+- Popup `Bao cao theo DGX`.
+- Popup `Bao cao theo yeu cau`.
+- Xuat Excel cho bao cao theo DGX.
+- Xuat Excel cho bao cao theo yeu cau.
+
+API backend:
+- `?api=fixed_points`
+  Tra danh sach diem co dinh theo ngay/toan bo va tu khoa.
+- `?api=fixed_dates`
+  Tra danh sach ngay GDX kha dung.
+- `?api=report_list`
+  Tra du lieu bao cao DGX theo ngay va ma DGX.
+- `?api=report_excel`
+  Xuat Excel cho bao cao DGX.
+- `?api=custom_report_list`
+  Tra du lieu bao cao theo yeu cau.
+- `?api=custom_report_excel`
+  Xuat Excel cho bao cao theo yeu cau.
+
+Bang/view Oracle phu thuoc chinh:
+- `SYNC_CONTROL`
+- `TRANSPOINT_SUBCOMMUNE_MAPPING`
+- `DMPOS`
+- `OFL_GDTN`
+- `OFL_TKTO`
+- `OFL_GDTG`
+- `OFL_TIDE_BOOKING`
+- `OFL_TIDE_WITHDRAWAL`
+- `OFL_GDGN`
+- `dm_dia_phuong_dgd`
+- `CHUAN_HOA_TK_INTELLECT`
+
+Co che quan trong:
+- Giai phong session som bang `session_write_close()` de request Oracle dai khong khoa tab khac.
+- `normalize_pos_codes_input()` tu dong them so `0` ben trai cho ma POS ngan hon 6 ky tu.
+- `get_missing_dgx_codes()` kiem tra ma DGX chua dong bo truoc khi report.
+- `get_custom_report_rows()` truy van theo tung ngay trong khoang de giam timeout Oracle.
+- Tang OCI call timeout rieng cho custom report.
+- Dung `PhpSpreadsheet` de tao file Excel font `Times New Roman`.
+
+Ham backend can nam trong `DGX/dgx.php`:
+- `normalize_date_input()`: chuan hoa ngay.
+- `normalize_dgx_codes_input()`: chuan hoa danh sach ma DGX.
+- `normalize_excel_number()`: ep kieu so cho Excel.
+- `is_fast_dgx_keyword()`: nhan dien tu khoa tim nhanh theo ma DGX.
+- `oci_run_query()`: wrapper chay query Oracle va bind tham so.
+- `get_missing_dgx_codes()`: tim ma DGX khong co du lieu trong ngay.
+- `normalize_pos_codes_input()`: chuan hoa danh sach POS.
+- `spreadsheet_library_available()`: kiem tra co `PhpSpreadsheet`.
+- `dgx_set_call_timeout()`: set timeout OCI.
+- `dgx_refresh_time_limit()`: reset `set_time_limit`.
+- `dgx_json_encode_payload()`: JSON an toan voi UTF-8 loi.
+- `dgx_send_json_response()`: tra JSON API.
+- `build_custom_report_timeout_message()`: tao thong diep timeout ro nghia vu.
+- `get_custom_report_rows()`: lay du lieu custom report theo tung ngay.
+- `build_custom_report_excel_filename()`: tao ten file xuat.
+
+Ham SQL can nam trong `DGX/dgx_sql.php`:
+- `dgx_fixed_points_sql()`: query danh sach diem co dinh.
+- `dgx_fixed_dates_sql()`: query danh sach ngay GDX kha dung.
+- `dgx_base_sql()`: query nen cua danh sach DGX chinh.
+- `dgx_report_sql()`: query bao cao DGX theo ngay.
+- `dgx_missing_codes_sql()`: kiem tra ma DGX thieu dong bo.
+- `dgx_custom_report_sql()`: query bao cao DGX theo khoang ngay/POS.
+
+Ham frontend noi bat trong `DGX/dgx.php`:
+- `parseQuickTokens()`: tach token loc nhanh trong bang chinh.
+- `loadFixedDates()`: nap ngay cho popup diem co dinh.
+- `loadFixedList()`: nap danh sach diem co dinh.
+
+Ham frontend noi bat trong `DGX/dgx_report_layout.php`:
+- `extractResponseMessage()`: doc thong diep loi thuc te tu response.
+- `readJsonResponse()`: parse JSON an toan.
+- `normalizeCodeTokens()`: chuan hoa ma DGX nhap tay.
+- `normalizePosTokens()`: chuan hoa ma POS nhap tay.
+- `initDraggableOverlay()`: khoi tao popup keo-tha.
+- `loadReportList()`: tai bao cao DGX.
+- `exportReportExcel()`: xuat Excel bao cao DGX.
+- `loadCustomReport()`: tai bao cao theo yeu cau.
+- `exportCustomReport()`: xuat Excel bao cao theo yeu cau.
+- `validateFilters()`: kiem tra bo loc custom report.
+
+### 4.4. Module HOME_PAGE (`HOME_PAGE/home_page.php`, `HOME_PAGE/home_page_sql.php`)
+
+Muc dich:
+- Hien dashboard tong hop du no theo POS / Xa.
+- Tong hop theo nguon von `ALL`, `TW`, `DP`.
+- Hien the so lieu tong hop.
+- Hien donut chart theo chuong trinh vay.
+- Hien danh sach tong hop theo POS va theo Xa.
+- Hien modal chi tiet theo chuong trinh vay khi click vao tung dong.
+
+Tinh nang nguoi dung:
+- Chon ngay bao cao.
+- Nhap `MAPOS`, mac dinh `3400`.
+- Chuyen bo loc nguon von bang toolbar chip.
+- Tai lai du lieu bang AJAX.
+- Xem top chuong trinh vay bang donut chart.
+- Click tung POS/Xa de mo modal chi tiet.
+
+API backend:
+- `?api=data`
+  Tra ve JSON du lieu tong hop de frontend ve lai toan bo dashboard.
+
+Bang/view Oracle phu thuoc chinh:
+- `HSCV_DAILY`
+- `DMPOS`
+- `DMXA`
+- `DM_SCHEME`
+
+Du lieu JSON tra ve tu API:
+- `totals`
+- `source_totals`
+- `top_scheme`
+- `pos_list`
+- `xa_list`
+- `details_by_pos`
+- `details_by_xa`
+- `total_kh`
+- `total_rows`
+- `active_source`
+- `active_source_label`
+- `error`
+
+Ham backend can nam trong `HOME_PAGE/home_page.php`:
+- `normalize_date_input()`: chuan hoa ngay.
+- `default_report_date_input()`: mac dinh la ngay hien tai tru 1 ngay.
+- `resolve_mapos_input()`: tra ve `3400` neu bo trong.
+- `resolve_source_input()`: chuan hoa `ALL/TW/DP`.
+- `home_page_source_label()`: doi ma nguon sang nhan hien thi.
+- `home_page_source_bind_value()`: doi `ALL` thanh `null` khi bind SQL.
+- `as_number()`: ep so an toan.
+- `oci_run_query()`: wrapper query Oracle.
+- `build_breakdown_index()`: tao index chi tiet theo POS/Xa va chuong trinh vay.
+- `build_chart_scheme_items()`: cat top chuong trinh vay cho donut chart.
+- `build_home_page_data()`: ham tong hop chinh, ghep du lieu tat ca panel.
+
+Ham SQL can nam trong `HOME_PAGE/home_page_sql.php`:
+- `home_page_source_case_sql()`: xac dinh nguon von `TW/DP`.
+- `home_page_base_sql_core()`: query nen cua dashboard.
+- `home_page_detail_grouped_sql_core()`: group tong hop theo POS/Xa.
+- `home_page_detail_sql()`: query chi tiet tong hop.
+- `home_page_scheme_breakdown_grouped_core()`: group theo chuong trinh vay.
+- `home_page_scheme_breakdown_sql()`: query chi tiet chuong trinh vay.
+- `home_page_totals_sql()`: tong hop KPI toan trang.
+- `home_page_source_totals_sql()`: tong du no theo nguon von.
+- `home_page_top_scheme_sql()`: top chuong trinh vay theo du no.
+- `dm_pos_sql()`: helper POS.
+
+Ham frontend noi bat:
+- `fmt()`: dinh dang so.
+- `normalizeSource()`: chuan hoa `ALL/TW/DP`.
+- `renderSourceToolbar()`: cap nhat toolbar nguon von.
+- `polarToCartesian()` va `describeDonutSlice()`: ve donut chart SVG.
+- `renderSchemeChart()`: render bieu do chuong trinh vay.
+- `renderSummaryList()`: render danh sach POS/Xa.
+- `renderDetailRows()`: render bang trong modal chi tiet.
+- `openDetail()` / `closeDetail()`: mo/dong modal chi tiet.
+- `bindListEvents()`: gan su kien click cho POS/Xa.
+- `setSource()`: doi bo loc nguon von.
+- `fetchData()`: goi API va cap nhat toan bo giao dien.
+
+### 4.5. Module USER-SYSTEM (`USER-SYSTEM/user_system.php`, `USER-SYSTEM/layout_insert.php`, `USER-SYSTEM/user_system_sql.php`)
+
+Muc dich:
+- Quan ly can bo tren database `qlcv`.
+- Loc danh sach theo tu khoa va phong ban.
+- Xem chi tiet 1 can bo.
+- Them moi can bo.
+- Cap nhat can bo.
+- Hien flash message sau khi luu.
+
+Tinh nang nguoi dung:
+- Tim kiem theo ma can bo, ho ten, phong ban, chuc vu, email.
+- Loc theo phong ban bang combobox.
+- Phan trang danh sach.
+- Loc nhanh trong bang hien tai.
+- Mo chi tiet can bo ben panel phai.
+- Cap nhat can bo co hoac khong doi mat khau.
+- Them moi can bo qua trang rieng `layout_insert.php`.
+- Xac nhan truoc khi ghi du lieu.
+- Giu nguyen bo loc va trang sau khi cap nhat.
+
+DB va bang du lieu:
+- Ket noi uu tien vao database `qlcv`.
+- Bang chinh:
+  - `canbo`
+  - `phongban`
+  - `CHUCVU`
+
+API/backend action:
+- `?api=detail&id=...`
+  Tra JSON chi tiet 1 can bo.
+- `?api=list`
+  Tra JSON danh sach can bo da loc.
+- `POST action=save`
+  Xu ly them moi hoac cap nhat.
+
+Co che quan trong:
+- Khi vao module, he thong mo ket noi rieng den DB `qlcv`.
+- Goi `db_allow_protected_host_writes()` de cho phep thao tac ghi tren host bao ve.
+- `return_url`, `return_keyword`, `return_filter_maphong`, `return_page` giup redirect ve dung man hinh sau khi luu.
+- `confirm_write` bat buoc bang `1` moi duoc ghi.
+- Truong `giaoviec` luon duoc dat `NULL`.
+- Neu them moi, mat khau bat buoc va duoc ma hoa qua `PASSWORD(...)`.
+
+Ham backend can nam trong `USER-SYSTEM/user_system.php`:
+- `json_exit()`: tra JSON.
+- `normalize_text()`: chuan hoa text dau vao.
+- `user_system_resolve_return_url()`: validate URL quay lai.
+- `user_system_redirect()`: redirect an toan kem query.
+- `user_system_row_matches()`: loc danh sach theo keyword.
+- `user_system_row_matches_department()`: loc theo phong ban.
+- `db_fetch_assoc_rows()`: helper doc nhieu dong tu MySQL.
+- `db_fetch_one_assoc()`: helper doc 1 dong.
+- `user_system_flash_set()`: set flash message.
+- `user_system_flash_take()`: lay va xoa flash.
+- `user_system_text()`: escape HTML.
+- `user_system_option_exists()`: kiem tra option ton tai trong danh sach.
+
+Ham backend can nam trong `USER-SYSTEM/layout_insert.php`:
+- `layout_insert_normalize_text()`: chuan hoa text dau vao.
+- `layout_insert_text()`: escape HTML.
+- `layout_insert_flash_take()`: lay flash cho man hinh them moi.
+- `layout_insert_db_fetch_assoc_rows()`: helper doc danh muc phong ban/chuc vu.
+
+Ham SQL can nam trong `USER-SYSTEM/user_system_sql.php`:
+- `user_system_list_sql()`: danh sach can bo.
+- `user_system_count_sql()`: dem tong can bo.
+- `user_system_detail_sql()`: chi tiet 1 can bo.
+- `user_system_insert_sql()`: insert can bo moi.
+- `user_system_update_sql()`: update can bo, co/khong co doi mat khau.
+- `user_system_role_sql()`: danh sach role.
+- `user_system_department_sql()`: danh sach phong ban.
+- `user_system_posotion_sql()`: danh sach chuc vu.
+
+Ham frontend noi bat:
+- `trimValue()`: chuan hoa input trong form chinh sua.
+- `isUpdateMode()`: nhan dien dang them moi hay cap nhat.
+- `promptSave()`: hop thoai xac nhan ghi.
+- Quick filter trong bang danh sach de loc client-side.
+- Form `layout_insert.php` cung co xac nhan truoc khi them moi.
+
+### 4.6. Lop ket noi DB (`DB/connect_DB.php`)
+
+Vai tro:
+- Doc cau hinh tu bien moi truong.
+- Ket noi MySQL nguon va local.
+- Ket noi Oracle.
+- Ghi nho loi ket noi gan nhat.
+- Chan lenh ghi vao host nhay cam neu chua cap phep.
+
+Host mac dinh dang duoc code san:
+- MySQL source: `10.64.0.251:3306`, DB `dngws`
+- MySQL local: `127.0.0.1:3307`, DB `dashboard_my`
+- Oracle: `10.64.0.56:1521`, service `IMSREPORT`
+
+Guard host bao ve:
+- `10.64.0.251`
+- `10.64.0.56`
+
+Ham backend can nam:
+- `env_or_default()`: doc ENV dang chuoi.
+- `env_int_or_default()`: doc ENV dang so nguyen.
+- `connect_mysql()`: mo MySQL co chon DB.
+- `connect_mysql_without_db()`: mo MySQL chua chon DB.
+- `db_last_mysql_connect_error()`: lay loi MySQL gan nhat.
+- `db_last_oracle_connect_error()`: lay loi Oracle gan nhat.
+- `db_is_protected_host()`: kiem tra host bao ve.
+- `db_strip_sql_comments()`: bo comment SQL.
+- `db_is_write_sql()`: phat hien SQL ghi.
+- `db_allow_protected_host_writes()`: cap quyen ghi cho host bao ve.
+- `db_is_protected_host_write_allowed()`: kiem tra da cap quyen ghi chua.
+- `db_should_block_sql()`: quyet dinh chan SQL.
+- `db_mysqli_prepare()`: wrapper prepare MySQL co guard.
+- `db_mysqli_query()`: wrapper query MySQL co guard.
+- `db_oci_parse()`: wrapper parse Oracle co guard.
+- `connect_oracle()`: mo Oracle, thu nhieu DSN va retry mot so loi listener.
+- `db_is_host_reachable()`: test host/port bang `fsockopen`.
+
+Bien quan trong sau khi load:
+- `$conn`
+- `$mysqlActiveHost`
+- `$oracle_conn`
+- `$sourceHost`, `$localHost`, `$oracleHost`
+
+### 4.7. Thu muc Oracle ho tro (`CODE-ORCALE_SQL`)
+
+Vai tro:
+- Chua script nghiep vu Oracle doc lap ngoai cac module web.
+- Phuc vu nghiep vu KT740 va cac phan tich Oracle.
+
+Noi dung chinh:
+- `CODE.SQL`
+  Chua thu tuc `INTELLECT.PROC_DN_KT740_TH`.
+  Thu tuc nay:
+  - Nhan `P_MAPOS`, `P_NGAYBC`.
+  - Kiem tra ngay HSTDCT va kha nang nhan du lieu.
+  - Xoa du lieu tam `DN_DATA_TEMP` cho key `DN_KT740_TH`.
+  - Lap theo tung POS va tung chi tieu `DN_KT740_TH`.
+  - Dung dynamic SQL de insert ket qua vao `DN_DATA_TEMP`.
+  - Mo `SYS_REFCURSOR` tra ve ket qua cuoi theo `CODE`, `MAXA`, `MAPOS`, `CHITIEU`, `DEP`, `SOLIEU`.
+  - Co `EXCEPTION` gom `SQLERRM`, `CODE`, `POS`.
+- `KT740.txt`
+  Truy van mau lien quan du lieu CASA 105, mapping xa, to tiet kiem va diem giao dich.
+- `README_ENCODING.md`
+  Nhac quy tac encoding UTF-8.
+
+Luu y:
+- Thu muc nay la nghiep vu Oracle doc lap, khong duoc web goi truc tiep tu `index.php`.
+- Tuy nhien no la mot phan cua project va can duoc xem nhu tai lieu/nghiep vu backend bo sung.
+
+### 4.8. Lop giao dien CSS (`view/*.php`)
+
+Vai tro:
+- Moi file tra ve `Content-Type: text/css; charset=UTF-8`.
+- Dung PHP lam endpoint CSS de tach style theo module.
+
+File chinh:
+- `view/style_Das.php`
+  Style cho shell dashboard chinh, sidebar, iframe, placeholder, badge.
+- `view/Styple_vb_iot.php`
+  Style cho:
+  - trang danh sach VB_IOT (`page=index`)
+  - trang xem van ban inline (`page=view`)
+- `view/Style_dgx.php`
+  Style cho danh sach DGX va cac popup bao cao.
+- `view/Style_home_page.php`
+  Style cho dashboard du no, cards, chart, modal chi tiet.
+- `view/Style_user_system.php`
+  Style cho USER-SYSTEM, form, table, hero, stat card.
+
+## 5. Routing, rewrite va entrypoint
+
+- `index.html`
+  Redirect client-side sang `index.php`, giu nguyen query string.
+
+- `.htaccess`
+  Co 2 rewrite quan trong:
+  - `file/<id>/<ten>.pdf` -> `VB_IOT/view_file.php?id=<id>&raw=1`
+  - `index.html` -> `index.php`
+
+Dieu nay cho phep:
+- Xem PDF inline bang URL dep.
+- Truy cap `index.html` nhung van chay vao shell PHP chinh.
+
+## 6. Phu thuoc va dieu kien van hanh
+
+Phu thuoc:
+- PHP + XAMPP.
+- MySQLi.
+- OCI8 de ket noi Oracle.
+- `phpoffice/phpspreadsheet` de xuat Excel.
+
+Composer:
+- `composer.json` hien tai chi khai bao:
+  - `phpoffice/phpspreadsheet`
+
+Dieu kien can de project chay day du:
+- Co the ket noi MySQL nguon hoac fallback sang local MySQL.
+- Co OCI8 va ket noi Oracle neu muon dung `DGX` va `HOME_PAGE`.
+- Co Apache rewrite de URL `/dashboard/file/...` hoat dong dung.
+
+## 7. Danh sach ham backend custom theo file
+
+### `DB/connect_DB.php`
+- `env_or_default`
+- `env_int_or_default`
+- `connect_mysql`
+- `connect_mysql_without_db`
+- `db_last_mysql_connect_error`
+- `db_last_oracle_connect_error`
+- `db_is_protected_host`
+- `db_strip_sql_comments`
+- `db_is_write_sql`
+- `db_allow_protected_host_writes`
+- `db_is_protected_host_write_allowed`
+- `db_should_block_sql`
+- `db_mysqli_prepare`
+- `db_mysqli_query`
+- `db_oci_parse`
+- `connect_oracle`
+- `db_is_host_reachable`
+
+### `HOME_PAGE/home_page_sql.php`
+- `home_page_source_case_sql`
+- `home_page_base_sql_core`
+- `home_page_detail_grouped_sql_core`
+- `home_page_detail_sql`
+- `home_page_scheme_breakdown_grouped_core`
+- `home_page_scheme_breakdown_sql`
+- `home_page_totals_sql`
+- `home_page_source_totals_sql`
+- `home_page_top_scheme_sql`
+- `dm_pos_sql`
+
+### `HOME_PAGE/home_page.php`
+- `normalize_date_input`
+- `default_report_date_input`
+- `resolve_mapos_input`
+- `resolve_source_input`
+- `home_page_source_label`
+- `home_page_source_bind_value`
+- `as_number`
+- `oci_run_query`
+- `build_breakdown_index`
+- `build_chart_scheme_items`
+- `build_home_page_data`
+
+### `DGX/dgx_sql.php`
+- `dgx_fixed_points_sql`
+- `dgx_fixed_dates_sql`
+- `dgx_base_sql`
+- `dgx_report_sql`
+- `dgx_missing_codes_sql`
+- `dgx_custom_report_sql`
+
+### `DGX/dgx.php`
+- `normalize_date_input`
+- `normalize_dgx_codes_input`
+- `normalize_excel_number`
+- `is_fast_dgx_keyword`
+- `oci_run_query`
+- `get_missing_dgx_codes`
+- `normalize_pos_codes_input`
+- `spreadsheet_library_available`
+- `dgx_set_call_timeout`
+- `dgx_refresh_time_limit`
+- `dgx_json_encode_payload`
+- `dgx_send_json_response`
+- `build_custom_report_timeout_message`
+- `get_custom_report_rows`
+- `build_custom_report_excel_filename`
+
+### `USER-SYSTEM/user_system_sql.php`
+- `user_system_list_sql`
+- `user_system_count_sql`
+- `user_system_detail_sql`
+- `user_system_insert_sql`
+- `user_system_update_sql`
+- `user_system_role_sql`
+- `user_system_department_sql`
+- `user_system_posotion_sql`
+
+### `USER-SYSTEM/user_system.php`
+- `json_exit`
+- `normalize_text`
+- `user_system_resolve_return_url`
+- `user_system_redirect`
+- `user_system_row_matches`
+- `user_system_row_matches_department`
+- `db_fetch_assoc_rows`
+- `db_fetch_one_assoc`
+- `user_system_flash_set`
+- `user_system_flash_take`
+- `user_system_text`
+- `user_system_option_exists`
+
+### `USER-SYSTEM/layout_insert.php`
+- `layout_insert_normalize_text`
+- `layout_insert_text`
+- `layout_insert_flash_take`
+- `layout_insert_db_fetch_assoc_rows`
+
+### `VB_IOT/vb_iot_sql.php`
+- `vb_iot_year_options_sql`
+- `vb_iot_mark_page_sql`
+- `vb_iot_mark_all_pages_sql`
+- `vb_iot_count_sql`
+- `vb_iot_list_sql`
+- `vb_iot_receiver_sql`
+- `vb_iot_read_filter_sql`
+- `vb_iot_source_file_sql`
+- `vb_iot_archive_exists_sql`
+- `vb_iot_archive_delete_by_key_sql`
+- `vb_iot_archive_update_sql`
+- `vb_iot_archive_insert_sql`
+- `vb_iot_archive_list_sql`
+- `vb_iot_archive_raw_sql`
+
+### `VB_IOT/vb_iot.php`
+- `normalize_date_input`
+- `json_exit`
+- `open_local_dashboard_conn`
+- `fetch_archive_types`
+- `append_blob_chunks`
+- `archive_lock_name`
+- `acquire_archive_lock`
+- `release_archive_lock`
+
+### `VB_IOT/view_file.php`
+- `normalize_mime`
+- `build_display_title`
+
+## 8. Cac file khong phai logic nghiep vu chinh
+
+- `composer-setup.php`
+  File cai dat Composer, khong thuoc logic dashboard.
+- `composer.phar`
+  Binary Composer.
+- `vendor/`
+  Thu vien ben thu ba.
+- `VB_IOT/vb_iot_tmp_backup.php`
+  Ban backup cua module VB_IOT.
+- `USER-SYSTEM/user_system.php.bak-20260323-vi`
+  Ban backup cua USER-SYSTEM.
+
+## 9. Ket luan nhanh
+
+Project nay thuc chat la mot bo dashboard PHP chia thanh 4 module nghiep vu ro rang:
+- 1 module quan ly van ban va luu tru local.
+- 1 module bao cao DGX va xuat Excel.
+- 1 module dashboard du no dung Oracle.
+- 1 module quan ly can bo tren DB `qlcv`.
+
+Neu can doc code de bao tri, cac file can uu tien nam dau tien la:
+- `index.php`
+- `DB/connect_DB.php`
+- `VB_IOT/vb_iot.php`
+- `DGX/dgx.php`
+- `HOME_PAGE/home_page.php`
+- `USER-SYSTEM/user_system.php`
+
+Neu can sua truy van, xem cac file:
+- `VB_IOT/vb_iot_sql.php`
+- `DGX/dgx_sql.php`
+- `HOME_PAGE/home_page_sql.php`
+- `USER-SYSTEM/user_system_sql.php`
+
+Neu can sua giao dien, xem:
+- `view/style_Das.php`
+- `view/Styple_vb_iot.php`
+- `view/Style_dgx.php`
+- `view/Style_home_page.php`
+- `view/Style_user_system.php`

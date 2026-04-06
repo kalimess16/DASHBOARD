@@ -1,112 +1,69 @@
-CREATE OR REPLACE PROCEDURE INTELLECT.PROC_DN_KT740_TH
-(
-    P_MAPOS         VARCHAR2,
-    P_NGAYBC        VARCHAR2,
-    P_THONGBAO      OUT VARCHAR2,
-    P_TRAVE         OUT SYS_REFCURSOR
-)
-AS
-    V_NGAYBC                VARCHAR2(20);
-    V_QUERY                 CLOB;
-    V_CODE                  VARCHAR2(6);
-    V_PERMIT                VARCHAR2(1);
-    V_POS                   VARCHAR2(6);
-BEGIN
-    -- LUU Y CHI THUC HIEN BAO CAO THEO DINH KY TUAN
-    IF NOT FUNC_LAY_NGAY_HSTDCT_GN(P_NGAYBC, P_THONGBAO) THEN
-        RETURN ;
-    END IF;
-    IF FUNC_KT_DB_RECIEVE(P_NGAYBC, P_THONGBAO) IS NOT NULL THEN
-        P_THONGBAO:='Chưa có dữ liệu HSTDCT ngày ' || P_NGAYBC || '.Không thể tiếp tục !!' ;
-        COMMIT ;
-        RETURN ;
-    END IF;
-    
-    P_THONGBAO := NULL;
-    SELECT TO_CHAR(TO_DATE(P_NGAYBC, 'DD/MM/YYYY'), 'DD-MON-YYYY') INTO V_NGAYBC FROM DUAL;
-    DELETE DN_DATA_TEMP WHERE C1 = 'DN_KT740_TH';
-    --DELETE HSTEST8 WHERE C1 = 'DN_KT740_TH';
-    FOR POS IN (
-        SELECT PO_MA FROM DMPOS 
-        WHERE DECODE(SUBSTR(P_MAPOS, 3, 2), '00', 1, PO_MA) = DECODE(SUBSTR(P_MAPOS, 3, 2), '00' , 1, '00' || P_MAPOS)
-             AND PO_MA NOT IN ('003410','003337')
-        ORDER BY PO_MA
-        ) 
-        LOOP
-     
-        FOR CT IN (
-            SELECT A.TH_CODE, A.TH_NAME, A.TH_QUERY, A.TH_CONNECT_KEY, 
-                SRQ_QUERY, A.TH_WHERE, A.TH_QUERY_DETAIL, A.TH_PERIOD
-            FROM DN_KT740_TH A 
-            LEFT JOIN SAVE_RPT_QUERY 
-            ON TH_ID_QUERY_TW = SRQ_SAVE_ID 
-            WHERE TH_QUERY IS NOT NULL AND A.TH_CODE NOT IN ('M101', 'M11') -- M11: HIỆN VBSP_KTNB_LSUAT CHƯA ĐỒNG BỘ LS MỚI
-            ORDER BY TH_ID_QUERY_TW
+    SELECT SUBSTR(TO_MADP, 1, 6) TO_MADP, NVL(DECODE(TO_DVUT, 'SEL', '15', TO_DVUT), '15') TO_DVUT,
+        TO_MATO, INITCAP(TO_TENTT) TO_TENTT, TO_MATT, GNGAN, DNTH, DNQH, DNKH, THUNO, LAITON, LAI_DT, LAI_TT, DUTK,
+        GUITK, RUTTK, SOHOVAY, SOHOTK,TKHH.SO_TKHH TO_TKHH, KH_DIACHI, KH_CMT, KH_NGAYCAP, KH_MOBILE, XA.TEN TENXA, GNTHANG, 
+        TO_TOPHO, TO_TENTOPHO, TK102, DUNO_NOXH, KH_NGAYSINH
+    FROM HSKH,
+        (
+        SELECT *
+        FROM
+            (
+            SELECT HH.*, ROW_NUMBER() OVER (PARTITION BY HH.TO_MATO, HH.TO_MAPGD ORDER BY HH.NG_CAPNHAT DESC) RN
+            FROM HSTO_HISTORY HH
+            WHERE HH.NG_CAPNHAT <= TO_DATE(P_NGAYBC, 'DD/MM/YYYY') AND HH.TO_MAPGD = '00' || P_MAPOS
             )
-        LOOP
-            
-            V_CODE := CT.TH_CODE;
-            V_QUERY := CT.SRQ_QUERY;
-            V_POS := POS.PO_MA;
-            IF CT.TH_PERIOD IS NOT NULL THEN
-                EXECUTE IMMEDIATE 
-                    REPLACE(REPLACE(CT.TH_PERIOD, '<P_NGAYBC>', V_NGAYBC), '<P_MAPOS>', POS.PO_MA)
-                INTO V_PERMIT;
-            ELSE
-                V_PERMIT := NULL;
-            END IF;
-            
-            IF V_PERMIT IS NULL THEN
-                            
-                V_QUERY := REPLACE(V_QUERY, 'PV_POS_CD', POS.PO_MA);
-                V_QUERY := REPLACE(V_QUERY, 'PD_REPORT_DATE', V_NGAYBC);
-                V_QUERY := REPLACE(REPLACE(V_QUERY, '''PS_DUOITV''', 5), '''PS_TRENTV''', 60);
-                V_QUERY := REPLACE(V_QUERY, '''PS_SOTHANG''', 3); 
-                V_QUERY := REPLACE(V_QUERY, '''PN_SONGAY''', 1);
-                V_QUERY := REPLACE(V_QUERY, '''PD_TU_NGAY''', '01' || SUBSTR(V_NGAYBC, 3));
-                V_QUERY := REPLACE(V_QUERY, '''PD_DEN_NGAY''', V_NGAYBC);   
-                
-                IF V_QUERY IS NOT NULL THEN
-                    V_QUERY := 'SELECT ''DN_KT740_TH'', ''' || V_CODE || ''', DMXA.MA, COUNT(NVL(' || CT.TH_CONNECT_KEY || ', ''X'')) KQ 
-                                FROM DMXA INNER JOIN (' || V_QUERY || ') B ON ' || CT.TH_QUERY || ' = B.' || CT.TH_CONNECT_KEY || 
-                                ' WHERE PGD_QL = '|| POS.PO_MA ||' AND DMXA.GDXFLG = ''Y'' ' ||
-                                CASE WHEN CT.TH_WHERE IS NOT NULL THEN ' AND (' || CT.TH_WHERE || ') ' ELSE ' ' END ||
-                                ' GROUP BY DMXA.MA';
-                ELSE
-                    V_QUERY := REPLACE(CT.TH_QUERY, '<P_TH_QUERY_DETAIL>', CT.TH_QUERY_DETAIL);
-                    V_QUERY := REPLACE(V_QUERY, '<P_NGAYBC>', V_NGAYBC);
-                    V_QUERY := REPLACE(V_QUERY, '<P_MAPOS>', POS.PO_MA);
-                    V_QUERY := REPLACE(REPLACE(V_QUERY, '<KEY>', 'DN_KT740_TH'), '<CODE>', V_CODE);
-                    
-                END IF;                                
-                V_QUERY := 'INSERT INTO DN_DATA_TEMP (C1, C2, C3, N1) ' || V_QUERY;    
-                -- V_QUERY := 'INSERT INTO HSTEST8 (C1, C2, C3, N1) ' || V_QUERY;      
-                EXECUTE IMMEDIATE V_QUERY;
-            END IF;
-        END LOOP;
-    END LOOP;        
-    
-    UPDATE ( SELECT H.C4, X.PGD_QL FROM DN_DATA_TEMP H JOIN DMXA X ON X.MA = H.C3 WHERE H.C1 = 'DN_KT740_TH') SET C4 = PGD_QL;
-    --UPDATE ( SELECT H.C4, X.PGD_QL FROM HSTEST8 H JOIN DMXA X ON X.MA = H.C3 WHERE H.C1 = 'DN_KT740_TH') SET C4 = PGD_QL;
-   
-    OPEN P_TRAVE FOR 
-    SELECT C2 AS CODE, C3 AS MAXA, C4 AS MAPOS,
-        TH_BAOCAO || TH_NAME AS CHITIEU, NVL(TH_DEP, 'ALL') AS DEP, N1 AS SOLIEU
-    FROM DN_DATA_TEMP 
-    INNER JOIN DN_KT740_TH ON C2 = TH_CODE
-    LEFT JOIN DMXA ON C3 = DMXA.MA AND DMXA.TRANGTHAI = 'A' and DMXA.GDXFLG='Y'
-    WHERE C1 = 'DN_KT740_TH'
-    ORDER BY MAPOS, MAXA, CODE;
-    
-    
-    EXCEPTION WHEN OTHERS THEN
-        P_THONGBAO := SQLERRM() || ' CODE ' || V_CODE || '-POS ' || V_POS;
-        DBMS_OUTPUT.PUT_LINE(
-            'LOI | CODE=' || V_CODE || ' | POS=' || V_POS || ' | ' || SQLERRM
-        );
-                --P_THONGBAO := SQLERRM || ' | ' || DBMS_UTILITY.FORMAT_ERROR_BACKTRACE;
-                --COMMIT ;
-        COMMIT;
-END ;
-/
-
+        WHERE RN = 1 AND TRANGTHAI <> 'C'
+        ), 
+        (
+        SELECT KU_MATO, SUM(NVL(KU_GNGAN, 0)) GNGAN, SUM(NVL(KU_DNOTHAN, 0)) DNTH, SUM(NVL(KU_DNOQHAN, 0)) DNQH, 
+            SUM(NVL(KU_DNOKHOANH, 0)) DNKH, SUM(NVL(KU_M_TNTHAN, 0) + NVL(KU_M_TNQHAN, 0) + NVL(KU_M_TNKHOANH, 0)) THUNO,
+            SUM(NVL(KU_LAITONTHAN, 0) + NVL(KU_LAITONQHAN, 0) - NVL(KU_LCDHAN_DT,0) ) LAITON, SUM(NVL(KU_LAI_DT, 0)) LAI_DT, 
+            SUM(NVL(KU_M_LAI_TT, 0)) LAI_TT, SUM(NVL(CS_SODU_TK, 0)) DUTK, SUM(NVL(CS_M_GUITK, 0)) GUITK, 
+            SUM(NVL(CS_M_RUTTK, 0)) RUTTK, COUNT(DISTINCT SOHOVAY) SOHOVAY, COUNT(DISTINCT SOHOTK) SOHOTK,
+            SUM(NVL(KU_M_GNGAN, 0)) GNTHANG, SUM(NVL(DUNO_NOXH, 0)) DUNO_NOXH
+        FROM
+            (                        
+            SELECT KU_MATO, KU_GNGAN, KU_DNOTHAN, KU_DNOQHAN, KU_DNOKHOANH, KU_M_TNTHAN, KU_M_TNQHAN,    
+                KU_M_TNKHOANH, KU_LAITONTHAN, KU_LAITONQHAN, KU_LAI_DT, KU_M_LAI_TT, 
+                0 CS_SODU_TK, 0 CS_M_GUITK, 0 CS_M_RUTTK, KU_MAKH SOHOVAY, NULL SOHOTK, KU_LCDHAN_DT, KU_M_GNGAN,
+                CASE 
+                WHEN KU_CHTRINH = '12' AND KU_SPRD_CD NOT IN ('121SL2', '121ML2', '121LL2') 
+                THEN KU_DNOTHAN + KU_DNOQHAN + KU_DNOKHOANH
+                ELSE 0 END DUNO_NOXH 
+            FROM HSKU
+            WHERE KU_NGAYBC = TO_DATE(P_NGAYBC, 'DD/MM/YYYY') AND KU_MAPGD = '00' || P_MAPOS AND KU_TTMONVAY <> 'CLOSE' AND 
+                KU_MATO IS NOT NULL AND LENGTH(TRIM(KU_MATO)) > 0
+            UNION ALL 
+            SELECT DISTINCT CS_MATO, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CS_SODU_TK, CS_M_GUITK, CS_M_RUTTK, NULL SOHOVAY, CS_MAKH SOHOTK, NULL KU_LCDHAN_DT, 0 KU_M_GNGAN, 0 DUNO_NOXH
+            FROM CASA_VIEW
+            WHERE CS_NGAYBC = TO_DATE(P_NGAYBC, 'DD/MM/YYYY') AND CS_MAPGD = '00' || P_MAPOS AND NVL(CS_SODU_TK, 0) > 0 AND
+                CS_SP_TK IN ('105') AND CS_MATO IS NOT NULL AND LENGTH(TRIM(CS_MATO)) > 0  
+            ) SL
+        GROUP BY KU_MATO                
+        ) AA,
+        (
+        SELECT MA || '00' MA, 'XÃ ' || MA || '00' TEN FROM DMHUYEN WHERE SUBSTR(MA, 1, 2) = SUBSTR(P_MAPOS, 1, 2)
+        --UNION SELECT MA, TEN FROM DMXA WHERE substr(pgd_ql,3,4) = P_MAPOS
+        UNION ALL SELECT MA, TEN FROM DMXA WHERE GDXFLG = 'Y' AND PGD_QL = '00' || P_MAPOS
+        ) XA,
+        (
+        SELECT DISTINCT CS_MAKH, CS_SO_TK2 AS TK102
+        FROM CASA_VIEW
+        WHERE CS_NGAYBC = TO_DATE(P_NGAYBC, 'DD/MM/YYYY') AND CS_MAPGD = '00' || P_MAPOS 
+            AND CS_SP_TK = '102' AND CS_TTSO_TK <> 'C'
+        ) TK,
+		( SELECT DISTINCT CS_MAKH, CS_SO_TK2 AS SO_TKHH
+		FROM CASA_VIEW
+		WHERE CS_NGAYBC = TO_DATE(P_NGAYBC, 'DD/MM/YYYY') AND CS_MAPGD = '00' || P_MAPOS
+			AND CS_TTSO_TK <> 'C' AND CS_SP_TK = '104'
+		) TKHH
+    WHERE TO_MATO = AA.KU_MATO AND TO_MATT = KH_MAKH AND KH_TTRANG = 'A' AND 
+        SUBSTR(TO_MADP, 1, 6) = XA.MA (+) AND TO_MAPGD = KH_MAPGD AND
+        (CASE WHEN SUBSTR(P_XA, 1, 3) <> 'ALL' AND INSTR(P_XA, ';') > 0 AND  SUBSTR(TO_MADP, 1, 6) IN
+        (
+        SELECT REGEXP_SUBSTR (P_XA, '[^;]+', 1, LEVEL) TRUONG FROM DUAL CONNECT BY REGEXP_SUBSTR (P_XA, '[^;]+', 1, LEVEL) IS NOT NULL
+        )
+        THEN 1 ELSE 0 END) = 
+        (CASE WHEN SUBSTR(P_XA, 1, 3) <> 'ALL' AND INSTR(P_XA, ';') > 0 THEN 1 ELSE 0 END)
+        AND TO_MATT = TK.CS_MAKH(+)
+		AND TO_MATT = TKHH.CS_MAKH(+)
+    ORDER BY  TO_MADP, TO_DVUT, TO_MATO ; 

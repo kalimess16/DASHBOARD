@@ -38,3 +38,11 @@
 - Nếu chỉnh CSS, kiểm tra lại desktop và mobile.
 - Nếu đổi text giao diện, giữ nguyên tiếng Việt có dấu.
 - Nếu đổi truy vấn, kiểm tra lại các tổng số ở thẻ thống kê, danh sách `POS / Xã`, donut chart, và modal chi tiết.
+
+## Cập nhật 2026-04-03
+
+- Danh sách POS / Xã hiển thị thêm DS cho vay và DS thu nợ.
+- Modal chi tiết theo chương trình vay hiển thị thêm hai chỉ tiêu trên ở phần tổng hợp và bảng chi tiết.
+- Function custom trong home_page.php và home_page_sql.php đã đổi sang tên tiếng Việt không dấu để dễ đọc và bảo trì.
+
+- Các chỉ tiêu tiền đang hiển thị theo đơn vị triệu đồng, làm tròn theo round(x / 1000000, 2) để gọn số.

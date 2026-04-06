@@ -62,8 +62,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - Trạng thái: 
 - Ưu tiên:  
 - File liên quan: CODE.SQL
-- Mục tiêu: Tìm kiếm nguyên nhân và phân tích
-- Yêu cầu chi tiết: khi tôi run proc này thì báo oke và có số liệu tại bảng hstest mà sao lại không thể lấy được số liệu và server báo lỗi SCHEDULE - CHECK740 - FAIL và ERROR ORACLE CHECK740DAO - HSTDCTNGAY. Khi tôi chạy tay trên orcale thì có thấy báo HSTDCTNGAY và vẫn có số liệu.
+- Mục tiêu: Tìm kiếm nguyên nhân và phân tích TẠI SAO LẠI THIẾU SỐ LIỆU
+- Yêu cầu chi tiết: KHI TÔI XUẤT THÌ SỐ LIỆU LẠI THIẾU 1 ÍT SAO VỚI DỮ LIỆU TỔNG TÔI CÓ. vỀ PHẦN TỔNG DƯ NỢ
 - Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
 - Kết quả mong muốn: có thể chạy dc - DONE và không ERROR
 - Cách kiểm tra: KHÔNG
@@ -87,8 +87,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: DGX.PHP, dgx_report_layout,dgx_sql.php, view/..
 - Mục tiêu: xuất báo cáo không thể hiện tên GDV
 - Yêu cầu chi tiết: 
@@ -112,11 +112,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP, view/..
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 
-    + đọc code này trong home_page <div id="errorBox" class="error-box" style="display:none;"></div>
-            <div class="loading" id="loadingBox">
-                <div class="spinner"></div>
-                <div class="loading-text">Đang tải dữ liệu...</div>
-            </div> xử lý giúp tôi thay vì hiện div này tôi muốn load lên 1 layout đang load " Đang lấy số liệu"
+    + số liệu thì round(x/ 1000000, 2) lại cho gọn số
 - Không được đụng vào: các chức năng không liện quan
 - Kết quả mong muốn: khắc phục toàn bộ các yêu cầu trên
 - Cách kiểm tra: vào chức năng home page sẽ thấy được đúng số liệu
@@ -167,23 +163,59 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - Cách kiểm tra:
 - Ghi chú thêm:
 
+## FUNC_SHARE
+
+### Task
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: Toàn bộ dự án có trong project
+- Mục tiêu: bổ sung tính năng/ gom dữ liệu / thiết kế lại menu
+- Yêu cầu chi tiết:
+    + Đọc toàn bộ code 
+    + tạo cho tôi 1 file php. mang tên ham_dung_chung.php Hàm này thì gom hết các chức năng có thể dùng dung cho toàn dự án này
+    + Thiết kế lại menu theo dạng Ngang và mở các menu con. 
+        - "Báo cáo" -> "Điểm GDX"
+        - "Tín dụng" -> "Tổng hợp dư nợ", ...
+        - "Văn bản" -> "Văn Bản"
+        - "Hệ Thống" -> "Quản lý User"
+    + tại trang chủ tôi muốn chia thành 3 phần: phần đầu trang (thể hiện menu), thân trang(chứa dữ liệu các chức năng), cuối trang(thông tin người tạo trang web)
+    + bảo mật cho trang web này chỉ mình ip: 10.64.0.108 connect, còn lại chặn hết
+    + đưa hết function thành tiếng Việt Hóa hết để dễ quản lý
+- Không được đụng vào: không có 
+- Kết quả mong muốn: Hoàn thành các yêu cầu trên
+- Cách kiểm tra: vào web là thấy
+- Ghi chú thêm: + cần sửa thì edit thêm CSS
+                + bổ sung thêm .md để sau này dễ quản ký
+
 ## Mẫu thêm thư mục mới
 
 Sao chép khối này khi bạn tạo thư mục mới:
 
 ```md
-## TEN_THU_MUC_MOI
+## FUNC_SHARE
 
 ### Task
-- Trạng thái: 
-- Ưu tiên: Trung bình
-- File liên quan:
-- Mục tiêu:
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: Toàn bộ dự án có trong project
+- Mục tiêu: bổ sung tính năng/ gom dữ liệu / thiết kế lại menu
 - Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
-- Ghi chú thêm:
+    + Đọc toàn bộ code 
+    + tạo cho tôi 1 file php. mang tên ham_dung_chung.php Hàm này thì gom hết các chức năng có thể dùng dung cho toàn dự án này
+    + Thiết kế lại menu theo dạng Ngang và mở các menu con. 
+        - "Báo cáo" -> "Điểm GDX"
+        - "Tín dụng" -> "Tổng hợp dư nợ", ...
+        - "Văn bản" -> "Văn Bản"
+        - "Hệ Thống" -> "Quản lý User"
+    + tại trang chủ tôi muốn chia thành 3 phần: phần đầu trang (thể hiện menu), thân trang(chứa dữ liệu các chức năng), cuối trang(thông tin người tạo trang web)
+    + bảo mật cho trang web này chỉ mình ip: 10.64.0.108 connect, còn lại chặn hết
+    + đưa hết function thành tiếng Việt Hóa hết để dễ quản lý
+- Không được đụng vào: không có 
+- Kết quả mong muốn: Hoàn thành các yêu cầu trên
+- Cách kiểm tra: vào web là thấy
+- Ghi chú thêm: + cần sửa thì edit thêm CSS
+                + bổ sung thêm .md để sau này dễ quản ký
+            
 ```
 
 ## Ví dụ nhanh

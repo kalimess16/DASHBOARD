@@ -23,7 +23,7 @@ require_once __DIR__ . '/home_page_sql.php';
 const HOME_PAGE_DEFAULT_MAPOS = '3400';
 const HOME_PAGE_DEFAULT_SOURCE = 'ALL';
 
-function normalize_date_input(string $value): string
+function chuan_hoa_ngay(string $value): string
 {
     $value = trim($value);
     if ($value === '') {
@@ -38,24 +38,24 @@ function normalize_date_input(string $value): string
     return '';
 }
 
-function default_report_date_input(): string
+function ngay_bao_cao_mac_dinh(): string
 {
     return date('Y-m-d', strtotime('-1 day'));
 }
 
-function resolve_mapos_input($value): string
+function xu_ly_mapos_dau_vao($value): string
 {
     $value = trim((string)$value);
     return $value === '' ? HOME_PAGE_DEFAULT_MAPOS : $value;
 }
 
-function resolve_source_input($value): string
+function xu_ly_nguon_von_dau_vao($value): string
 {
     $value = strtoupper(trim((string)$value));
     return in_array($value, ['ALL', 'TW', 'DP'], true) ? $value : HOME_PAGE_DEFAULT_SOURCE;
 }
 
-function home_page_source_label(string $source): string
+function nhan_nguon_von_home_page(string $source): string
 {
     return match ($source) {
         'TW' => 'Nguồn Trung ương',
@@ -64,12 +64,12 @@ function home_page_source_label(string $source): string
     };
 }
 
-function home_page_source_bind_value(string $source): ?string
+function gia_tri_bind_nguon_von_home_page(string $source): ?string
 {
     return $source === HOME_PAGE_DEFAULT_SOURCE ? null : $source;
 }
 
-function as_number($value): float
+function ep_kieu_so($value): float
 {
     if ($value === null || $value === '') {
         return 0.0;
@@ -81,12 +81,12 @@ function as_number($value): float
     return is_numeric($clean) ? (float)$clean : 0.0;
 }
 
-function oci_run_query($conn, string $sql, array $binds = [], ?string &$err = null): ?array
+function oracle_chay_truy_van($conn, string $sql, array $binds = [], ?string &$err = null): ?array
 {
     $stmt = db_oci_parse($conn, $sql);
     if ($stmt === false) {
         $e = oci_error($conn);
-        $err = $e['message'] ?? 'OCI parse error or blocked write SQL';
+        $err = $e['message'] ?? 'Lỗi phân tích câu lệnh Oracle hoặc câu SQL ghi bị chặn';
         return null;
     }
 
@@ -95,7 +95,7 @@ function oci_run_query($conn, string $sql, array $binds = [], ?string &$err = nu
         $bindVars[$name] = $value;
         if (@oci_bind_by_name($stmt, ':' . $name, $bindVars[$name]) === false) {
             $e = oci_error($stmt);
-            $err = $e['message'] ?? 'OCI bind error';
+            $err = $e['message'] ?? 'Lỗi bind tham số Oracle';
             oci_free_statement($stmt);
             return null;
         }
@@ -103,7 +103,7 @@ function oci_run_query($conn, string $sql, array $binds = [], ?string &$err = nu
 
     if (@oci_execute($stmt, OCI_NO_AUTO_COMMIT) === false) {
         $e = oci_error($stmt);
-        $err = $e['message'] ?? 'OCI execute error';
+        $err = $e['message'] ?? 'Lỗi thực thi câu lệnh Oracle';
         oci_free_statement($stmt);
         return null;
     }
@@ -116,7 +116,7 @@ function oci_run_query($conn, string $sql, array $binds = [], ?string &$err = nu
     return $rows;
 }
 
-function build_breakdown_index(array $rows, string $codeField, string $nameField): array
+function lap_chi_tiet_theo_don_vi(array $rows, string $codeField, string $nameField): array
 {
     $groups = [];
 
@@ -132,9 +132,11 @@ function build_breakdown_index(array $rows, string $codeField, string $nameField
             $scheme = 'Không rõ CT vay';
         }
 
-        $duno = as_number($row['DUNO'] ?? 0);
-        $dnqh = as_number($row['DNQH'] ?? 0);
-        $dnkh = as_number($row['DNKH'] ?? 0);
+        $duno = ep_kieu_so($row['DUNO'] ?? 0);
+        $dnqh = ep_kieu_so($row['DNQH'] ?? 0);
+        $dnkh = ep_kieu_so($row['DNKH'] ?? 0);
+        $chovay = ep_kieu_so($row['CHOVAY'] ?? 0);
+        $thuno = ep_kieu_so($row['THUNO'] ?? 0);
 
         if (!isset($groups[$code])) {
             $groups[$code] = [
@@ -144,6 +146,8 @@ function build_breakdown_index(array $rows, string $codeField, string $nameField
                     'DUNO' => 0.0,
                     'DNQH' => 0.0,
                     'DNKH' => 0.0,
+                    'CHOVAY' => 0.0,
+                    'THUNO' => 0.0,
                 ],
                 'ITEMS' => [],
                 'SCHEME_COUNT' => 0,
@@ -157,6 +161,8 @@ function build_breakdown_index(array $rows, string $codeField, string $nameField
         $groups[$code]['TOTALS']['DUNO'] += $duno;
         $groups[$code]['TOTALS']['DNQH'] += $dnqh;
         $groups[$code]['TOTALS']['DNKH'] += $dnkh;
+        $groups[$code]['TOTALS']['CHOVAY'] += $chovay;
+        $groups[$code]['TOTALS']['THUNO'] += $thuno;
 
         if (!isset($groups[$code]['ITEMS'][$scheme])) {
             $groups[$code]['ITEMS'][$scheme] = [
@@ -164,12 +170,16 @@ function build_breakdown_index(array $rows, string $codeField, string $nameField
                 'DUNO' => 0.0,
                 'DNQH' => 0.0,
                 'DNKH' => 0.0,
+                'CHOVAY' => 0.0,
+                'THUNO' => 0.0,
             ];
         }
 
         $groups[$code]['ITEMS'][$scheme]['DUNO'] += $duno;
         $groups[$code]['ITEMS'][$scheme]['DNQH'] += $dnqh;
         $groups[$code]['ITEMS'][$scheme]['DNKH'] += $dnkh;
+        $groups[$code]['ITEMS'][$scheme]['CHOVAY'] += $chovay;
+        $groups[$code]['ITEMS'][$scheme]['THUNO'] += $thuno;
     }
 
     foreach ($groups as &$group) {
@@ -182,13 +192,13 @@ function build_breakdown_index(array $rows, string $codeField, string $nameField
     return $groups;
 }
 
-function build_chart_scheme_items(array $rows, int $limit = 6): array
+function tao_du_lieu_bieu_do_chuong_trinh(array $rows, int $limit = 6): array
 {
     $items = [];
     foreach ($rows as $row) {
         $items[] = [
             'TENCTVAY' => trim((string)($row['TENCTVAY'] ?? 'Không rõ CT vay')),
-            'DUNO' => as_number($row['DUNO'] ?? 0),
+            'DUNO' => ep_kieu_so($row['DUNO'] ?? 0),
         ];
     }
 
@@ -213,7 +223,7 @@ function build_chart_scheme_items(array $rows, int $limit = 6): array
 
     return $visible;
 }
-function build_home_page_data(string $reportDateOracle, string $mapos, string $sourceFilter, string &$queryError): array
+function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $sourceFilter, string &$queryError): array
 {
     global $oracle_conn;
 
@@ -235,17 +245,17 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
         $binds = [
             'P_NGAYBC' => $reportDateOracle,
             'P_MAPOS' => $mapos,
-            'P_NGUONVON' => home_page_source_bind_value($sourceFilter),
+            'P_NGUONVON' => gia_tri_bind_nguon_von_home_page($sourceFilter),
         ];
         $sourceTotalBinds = [
             'P_NGAYBC' => $reportDateOracle,
             'P_MAPOS' => $mapos,
         ];
 
-        $detailRows = oci_run_query($oracle_conn, home_page_detail_sql(), $binds, $queryError) ?? [];
+        $detailRows = oracle_chay_truy_van($oracle_conn, sql_chi_tiet_home_page(), $binds, $queryError) ?? [];
 
         $totalsErr = '';
-        $totalsRows = oci_run_query($oracle_conn, home_page_totals_sql(), $binds, $totalsErr);
+        $totalsRows = oracle_chay_truy_van($oracle_conn, sql_tong_the_home_page(), $binds, $totalsErr);
         if (is_array($totalsRows) && isset($totalsRows[0])) {
             $totalsFromSql = $totalsRows[0];
             $totalRowsFromSql = isset($totalsFromSql['TOTAL_ROWS']) ? (int)$totalsFromSql['TOTAL_ROWS'] : null;
@@ -255,47 +265,47 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
         }
 
         $sourceTotalsErr = '';
-        $sourceTotalRows = oci_run_query($oracle_conn, home_page_source_totals_sql(), $sourceTotalBinds, $sourceTotalsErr);
+        $sourceTotalRows = oracle_chay_truy_van($oracle_conn, sql_tong_theo_nguon_von_home_page(), $sourceTotalBinds, $sourceTotalsErr);
         if (is_array($sourceTotalRows) && isset($sourceTotalRows[0])) {
-            $sourceTotals['TW'] = as_number($sourceTotalRows[0]['DUNO_TW'] ?? 0);
-            $sourceTotals['DP'] = as_number($sourceTotalRows[0]['DUNO_DP'] ?? 0);
+            $sourceTotals['TW'] = ep_kieu_so($sourceTotalRows[0]['DUNO_TW'] ?? 0);
+            $sourceTotals['DP'] = ep_kieu_so($sourceTotalRows[0]['DUNO_DP'] ?? 0);
             $sourceTotals['ALL'] = $sourceTotals['TW'] + $sourceTotals['DP'];
         } elseif ($sourceTotalsErr !== '' && $queryError === '') {
             $queryError = $sourceTotalsErr;
         }
 
         $schemeErr = '';
-        $schemeRows = oci_run_query($oracle_conn, home_page_scheme_breakdown_sql(), $binds, $schemeErr) ?? [];
+        $schemeRows = oracle_chay_truy_van($oracle_conn, sql_chuong_trinh_vay_home_page(), $binds, $schemeErr) ?? [];
         if ($schemeErr !== '' && $queryError === '') {
             $queryError = $schemeErr;
         }
 
         $topSchemeErr = '';
-        $topSchemeRows = oci_run_query($oracle_conn, home_page_top_scheme_sql(), $binds, $topSchemeErr) ?? [];
+        $topSchemeRows = oracle_chay_truy_van($oracle_conn, sql_top_chuong_trinh_vay_home_page(), $binds, $topSchemeErr) ?? [];
         if ($topSchemeErr !== '' && $queryError === '') {
             $queryError = $topSchemeErr;
         }
     }
 
     $totals = [
-        'DUNO' => $totalsFromSql !== null ? as_number($totalsFromSql['DUNO'] ?? 0) : 0.0,
-        'DNQH' => $totalsFromSql !== null ? as_number($totalsFromSql['DNQH'] ?? 0) : 0.0,
-        'DNTH' => $totalsFromSql !== null ? as_number($totalsFromSql['DNTH'] ?? 0) : 0.0,
-        'DNKH' => $totalsFromSql !== null ? as_number($totalsFromSql['DNKH'] ?? 0) : 0.0,
-        'CHOVAY' => $totalsFromSql !== null ? as_number($totalsFromSql['CHOVAY'] ?? 0) : 0.0,
-        'THUNO' => $totalsFromSql !== null ? as_number($totalsFromSql['THUNO'] ?? 0) : 0.0,
+        'DUNO' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['DUNO'] ?? 0) : 0.0,
+        'DNQH' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['DNQH'] ?? 0) : 0.0,
+        'DNTH' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['DNTH'] ?? 0) : 0.0,
+        'DNKH' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['DNKH'] ?? 0) : 0.0,
+        'CHOVAY' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['CHOVAY'] ?? 0) : 0.0,
+        'THUNO' => $totalsFromSql !== null ? ep_kieu_so($totalsFromSql['THUNO'] ?? 0) : 0.0,
     ];
 
     $byPos = [];
     $byXa = [];
 
     foreach ($detailRows as $row) {
-        $duno = as_number($row['DUNO'] ?? 0);
-        $dnqh = as_number($row['DNQH'] ?? 0);
-        $dnth = as_number($row['DNTH'] ?? 0);
-        $dnkh = as_number($row['DNKH'] ?? 0);
-        $chovay = as_number($row['CHOVAY'] ?? 0);
-        $thuno = as_number($row['THUNO'] ?? 0);
+        $duno = ep_kieu_so($row['DUNO'] ?? 0);
+        $dnqh = ep_kieu_so($row['DNQH'] ?? 0);
+        $dnth = ep_kieu_so($row['DNTH'] ?? 0);
+        $dnkh = ep_kieu_so($row['DNKH'] ?? 0);
+        $chovay = ep_kieu_so($row['CHOVAY'] ?? 0);
+        $thuno = ep_kieu_so($row['THUNO'] ?? 0);
 
         if ($totalsFromSql === null) {
             $totals['DUNO'] += $duno;
@@ -316,12 +326,16 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
                     'DUNO' => 0.0,
                     'DNQH' => 0.0,
                     'DNKH' => 0.0,
+                    'CHOVAY' => 0.0,
+                    'THUNO' => 0.0,
                     'COUNT' => 0,
                 ];
             }
             $byPos[$maposRow]['DUNO'] += $duno;
             $byPos[$maposRow]['DNQH'] += $dnqh;
             $byPos[$maposRow]['DNKH'] += $dnkh;
+            $byPos[$maposRow]['CHOVAY'] += $chovay;
+            $byPos[$maposRow]['THUNO'] += $thuno;
             $byPos[$maposRow]['COUNT'] += 1;
             if ($byPos[$maposRow]['TENPOS'] === '' && $tenpos !== '') {
                 $byPos[$maposRow]['TENPOS'] = $tenpos;
@@ -338,12 +352,16 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
                     'DUNO' => 0.0,
                     'DNQH' => 0.0,
                     'DNKH' => 0.0,
+                    'CHOVAY' => 0.0,
+                    'THUNO' => 0.0,
                     'COUNT' => 0,
                 ];
             }
             $byXa[$maxa]['DUNO'] += $duno;
             $byXa[$maxa]['DNQH'] += $dnqh;
             $byXa[$maxa]['DNKH'] += $dnkh;
+            $byXa[$maxa]['CHOVAY'] += $chovay;
+            $byXa[$maxa]['THUNO'] += $thuno;
             $byXa[$maxa]['COUNT'] += 1;
             if ($byXa[$maxa]['TENXA'] === '' && $tenxa !== '') {
                 $byXa[$maxa]['TENXA'] = $tenxa;
@@ -356,13 +374,13 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
     usort($posList, fn($a, $b) => $b['DUNO'] <=> $a['DUNO']);
     usort($xaList, fn($a, $b) => $b['DUNO'] <=> $a['DUNO']);
 
-    $detailsByPos = build_breakdown_index($schemeRows, 'MAPOS', 'TENPOS');
-    $detailsByXa = build_breakdown_index($schemeRows, 'MAXA', 'TENXA');
+    $detailsByPos = lap_chi_tiet_theo_don_vi($schemeRows, 'MAPOS', 'TENPOS');
+    $detailsByXa = lap_chi_tiet_theo_don_vi($schemeRows, 'MAXA', 'TENXA');
 
     return [
         'totals' => $totals,
         'source_totals' => $sourceTotals,
-        'top_scheme' => build_chart_scheme_items($topSchemeRows),
+        'top_scheme' => tao_du_lieu_bieu_do_chuong_trinh($topSchemeRows),
         'pos_list' => $posList,
         'xa_list' => $xaList,
         'details_by_pos' => $detailsByPos,
@@ -370,20 +388,20 @@ function build_home_page_data(string $reportDateOracle, string $mapos, string $s
         'total_kh' => $totalKhFromSql !== null ? $totalKhFromSql : 0,
         'total_rows' => $totalRowsFromSql !== null ? $totalRowsFromSql : count($detailRows),
         'active_source' => $sourceFilter,
-        'active_source_label' => home_page_source_label($sourceFilter),
+        'active_source_label' => nhan_nguon_von_home_page($sourceFilter),
         'error' => $queryError,
     ];
 }
 
 $indexUrl = '/dashboard/HOME_PAGE/home_page.php';
 $maposDefault = HOME_PAGE_DEFAULT_MAPOS;
-$reportDateDefault = default_report_date_input();
-$reportDate = normalize_date_input((string)($_GET['report_date'] ?? $reportDateDefault));
+$reportDateDefault = ngay_bao_cao_mac_dinh();
+$reportDate = chuan_hoa_ngay((string)($_GET['report_date'] ?? $reportDateDefault));
 if ($reportDate === '') {
     $reportDate = $reportDateDefault;
 }
-$mapos = resolve_mapos_input($_GET['mapos'] ?? $maposDefault);
-$sourceFilter = resolve_source_input($_GET['source'] ?? HOME_PAGE_DEFAULT_SOURCE);
+$mapos = xu_ly_mapos_dau_vao($_GET['mapos'] ?? $maposDefault);
+$sourceFilter = xu_ly_nguon_von_dau_vao($_GET['source'] ?? HOME_PAGE_DEFAULT_SOURCE);
 $reportDateOracle = date('d/m/Y', strtotime($reportDate));
 
 if (isset($_GET['api']) && $_GET['api'] === 'data') {
@@ -393,7 +411,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
     header('Content-Type: application/json; charset=UTF-8');
 
     $queryError = '';
-    $data = build_home_page_data($reportDateOracle, $mapos, $sourceFilter, $queryError);
+    $data = tao_du_lieu_home_page($reportDateOracle, $mapos, $sourceFilter, $queryError);
 
     echo json_encode([
         'ok' => $queryError === '',
@@ -469,7 +487,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                         <h2>Bộ lọc nguồn</h2>
                     </div>
                     <div class="source-head-actions">
-                        <span class="panel-count panel-count--source" id="sourceCurrent">Đang xem: <?php echo htmlspecialchars(home_page_source_label($sourceFilter), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="panel-count panel-count--source" id="sourceCurrent">Đang xem: <?php echo htmlspecialchars(nhan_nguon_von_home_page($sourceFilter), ENT_QUOTES, 'UTF-8'); ?></span>
                         <button type="button" class="source-reset" id="sourceResetBtn">Bỏ lọc</button>
                     </div>
                 </div>
@@ -508,13 +526,15 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                     <p class="panel-kicker">Chương trình vay</p>
                     <h2>Biểu đồ dư nợ theo chương trình</h2>
                 </div>
-                <p class="panel-note-inline">Hover hoặc chạm vào lát cắt để xem chi tiết.</p>
+                <p class="panel-note-inline">Di chuột hoặc chạm vào lát cắt để xem chi tiết.</p>
             </div>
             <div id="schemeChart" class="scheme-chart empty">
                 <div class="empty-box">Đang tải dữ liệu...</div>
             </div>
         </article>
     </section>
+
+    <p class="panel-note panel-note--compact">Đơn vị hiển thị cho các chỉ tiêu tiền: triệu đồng, làm tròn 2 số lẻ.</p>
 
     <section class="cards" id="cardsBox">
         <article class="card accent-card">
@@ -547,12 +567,12 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         <article class="panel list-panel list-panel--pos">
             <div class="panel-head">
                 <div>
-                    <p class="panel-kicker">POS Layout</p>
+                    <p class="panel-kicker">Khối POS</p>
                     <h2>Danh sách theo POS</h2>
                 </div>
                 <span class="panel-count" id="posCount">0 dòng</span>
             </div>
-            <p class="panel-note">Khối bên trái là tổng hợp theo POS. Màu nhấn thiên xanh dương để dễ nhận diện điểm giao dịch.</p>
+            <p class="panel-note">Khối bên trái tổng hợp theo POS, hiển thị thêm dư nợ, DNQH, DNKH, DS cho vay và DS thu nợ.</p>
             <div id="posList" class="summary-list">
                 <div class="empty-box">Đang tải dữ liệu...</div>
             </div>
@@ -561,12 +581,12 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         <article class="panel list-panel list-panel--xa">
             <div class="panel-head">
                 <div>
-                    <p class="panel-kicker">Xã Layout</p>
+                    <p class="panel-kicker">Khối Xã</p>
                     <h2>Danh sách theo Xã</h2>
                 </div>
                 <span class="panel-count" id="xaCount">0 dòng</span>
             </div>
-            <p class="panel-note">Khối bên phải là tổng hợp theo xã. Màu nhấn thiên xanh lá để tách rõ với phần POS.</p>
+            <p class="panel-note">Khối bên phải tổng hợp theo xã, hiển thị thêm dư nợ, DNQH, DNKH, DS cho vay và DS thu nợ.</p>
             <div id="xaList" class="summary-list">
                 <div class="empty-box">Đang tải dữ liệu...</div>
             </div>
@@ -600,6 +620,14 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                 <strong id="detailDnkh">0</strong>
             </article>
             <article class="detail-stat">
+                <span class="detail-stat-label">DS cho vay</span>
+                <strong id="detailChovay">0</strong>
+            </article>
+            <article class="detail-stat">
+                <span class="detail-stat-label">DS thu nợ</span>
+                <strong id="detailThuno">0</strong>
+            </article>
+            <article class="detail-stat">
                 <span class="detail-stat-label">Số CT vay</span>
                 <strong id="detailSchemeCount">0</strong>
             </article>
@@ -609,14 +637,16 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             <table class="detail-table">
                 <thead>
                     <tr>
-                        <th style="width: 43%;">CHƯƠNG TRÌNH VAY</th>
-                        <th style="width: 19%;">DƯ NỢ</th>
-                        <th style="width: 19%;">DNQH</th>
-                        <th style="width: 19%;">DNKH</th>
+                        <th style="width: 28%;">CHƯƠNG TRÌNH VAY</th>
+                        <th style="width: 14%;">DƯ NỢ</th>
+                        <th style="width: 14%;">DNQH</th>
+                        <th style="width: 14%;">DNKH</th>
+                        <th style="width: 15%;">DS CHO VAY</th>
+                        <th style="width: 15%;">DS THU NỢ</th>
                     </tr>
                 </thead>
                 <tbody id="detailBody">
-                    <tr><td colspan="4" class="empty-row">Chưa có dữ liệu.</td></tr>
+                    <tr><td colspan="6" class="empty-row">Chưa có dữ liệu.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -655,6 +685,8 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
     var detailDuno = document.getElementById('detailDuno');
     var detailDnqh = document.getElementById('detailDnqh');
     var detailDnkh = document.getElementById('detailDnkh');
+    var detailChovay = document.getElementById('detailChovay');
+    var detailThuno = document.getElementById('detailThuno');
     var detailSchemeCount = document.getElementById('detailSchemeCount');
     var detailBody = document.getElementById('detailBody');
     var cards = {
@@ -669,7 +701,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
     var currentData = null;
     var currentSource = <?php echo json_encode($sourceFilter, JSON_UNESCAPED_UNICODE); ?>;
     var schemePalette = ['#0f5e79', '#1683a4', '#21a7b5', '#40c2bf', '#72dbc3', '#9be7d0', '#d7f5e9'];
-    function fmt(value){
+    function dinh_dang_so(value){
         var n = Number(value);
         if (!isFinite(n)) {
             return '--';
@@ -677,7 +709,23 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
     }
 
-    function esc(value){
+    function quy_doi_trieu(value){
+        var n = Number(value);
+        if (!isFinite(n)) {
+            return NaN;
+        }
+        return Math.round((n / 1000000) * 100) / 100;
+    }
+
+    function dinh_dang_so_trieu(value){
+        var n = quy_doi_trieu(value);
+        if (!isFinite(n)) {
+            return '--';
+        }
+        return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function ma_hoa_html(value){
         return String(value == null ? '' : value)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -685,13 +733,13 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             .replace(/"/g, '&quot;');
     }
 
-    function normalizeSource(value){
+    function chuan_hoa_nguon(value){
         value = String(value == null ? '' : value).toUpperCase().trim();
         return value === 'TW' || value === 'DP' ? value : 'ALL';
     }
 
-    function sourceLabel(value){
-        value = normalizeSource(value);
+    function nhan_nguon_von(value){
+        value = chuan_hoa_nguon(value);
         if (value === 'TW') {
             return 'Nguồn Trung ương';
         }
@@ -701,13 +749,13 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         return 'Toàn nguồn';
     }
 
-    function setLoading(isLoading){
+    function bat_trang_thai_tai(isLoading){
         if (loadingBox) {
             loadingBox.style.display = isLoading ? 'flex' : 'none';
         }
     }
 
-    function showError(message){
+    function hien_thi_loi(message){
         if (!errorBox) {
             return;
         }
@@ -715,22 +763,22 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         errorBox.style.display = '';
     }
 
-    function clearError(){
+    function xoa_loi(){
         if (errorBox) {
             errorBox.style.display = 'none';
         }
     }
 
-    function getFilters(){
+    function lay_bo_loc(){
         return {
             report_date: reportDateInput ? reportDateInput.value : '',
             mapos: maposInput ? maposInput.value.trim() : '',
-            source: normalizeSource(sourceInput ? sourceInput.value : currentSource)
+            source: chuan_hoa_nguon(sourceInput ? sourceInput.value : currentSource)
         };
     }
 
-    function buildUrl(withApi){
-        var filters = getFilters();
+    function tao_url(withApi){
+        var filters = lay_bo_loc();
         var params = new URLSearchParams();
         if (withApi) {
             params.set('api', 'data');
@@ -748,41 +796,41 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         return pageUrl + (query ? ('?' + query) : '');
     }
 
-    function syncUrl(){
+    function dong_bo_url(){
         if (window.history && window.history.replaceState) {
-            window.history.replaceState({}, '', buildUrl(false));
+            window.history.replaceState({}, '', tao_url(false));
         }
     }
 
-    function renderSourceToolbar(sourceTotals){
+    function ve_bo_loc_nguon(sourceTotals){
         var totals = sourceTotals || {};
-        currentSource = normalizeSource(sourceInput ? sourceInput.value : currentSource);
+        currentSource = chuan_hoa_nguon(sourceInput ? sourceInput.value : currentSource);
 
         if (sourceAllValue) {
-            sourceAllValue.textContent = fmt(totals.ALL || 0);
+            sourceAllValue.textContent = dinh_dang_so_trieu(totals.ALL || 0);
         }
         if (sourceTwValue) {
-            sourceTwValue.textContent = fmt(totals.TW || 0);
+            sourceTwValue.textContent = dinh_dang_so_trieu(totals.TW || 0);
         }
         if (sourceDpValue) {
-            sourceDpValue.textContent = fmt(totals.DP || 0);
+            sourceDpValue.textContent = dinh_dang_so_trieu(totals.DP || 0);
         }
         if (sourceCurrent) {
-            sourceCurrent.textContent = 'Đang xem: ' + sourceLabel(currentSource);
+            sourceCurrent.textContent = 'Đang xem: ' + nhan_nguon_von(currentSource);
         }
         if (sourceResetBtn) {
             sourceResetBtn.disabled = currentSource === 'ALL';
         }
 
         document.querySelectorAll('.source-option').forEach(function(button){
-            var buttonSource = normalizeSource(button.getAttribute('data-source'));
+            var buttonSource = chuan_hoa_nguon(button.getAttribute('data-source'));
             var isActive = buttonSource === currentSource;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
-    function polarToCartesian(cx, cy, radius, angleInDegrees){
+    function diem_cuc_sang_xy(cx, cy, radius, angleInDegrees){
         var angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
         return {
             x: cx + (radius * Math.cos(angleInRadians)),
@@ -790,16 +838,16 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         };
     }
 
-    function describeDonutSlice(cx, cy, outerRadius, innerRadius, startAngle, endAngle){
+    function mo_ta_lat_cat_donut(cx, cy, outerRadius, innerRadius, startAngle, endAngle){
         var safeEndAngle = endAngle;
         if (safeEndAngle - startAngle >= 360) {
             safeEndAngle = startAngle + 359.999;
         }
 
-        var startOuter = polarToCartesian(cx, cy, outerRadius, safeEndAngle);
-        var endOuter = polarToCartesian(cx, cy, outerRadius, startAngle);
-        var startInner = polarToCartesian(cx, cy, innerRadius, startAngle);
-        var endInner = polarToCartesian(cx, cy, innerRadius, safeEndAngle);
+        var startOuter = diem_cuc_sang_xy(cx, cy, outerRadius, safeEndAngle);
+        var endOuter = diem_cuc_sang_xy(cx, cy, outerRadius, startAngle);
+        var startInner = diem_cuc_sang_xy(cx, cy, innerRadius, startAngle);
+        var endInner = diem_cuc_sang_xy(cx, cy, innerRadius, safeEndAngle);
         var largeArcFlag = safeEndAngle - startAngle > 180 ? 1 : 0;
 
         return [
@@ -811,7 +859,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         ].join(' ');
     }
 
-    function clearSchemeActive(){
+    function xoa_trang_thai_chuong_trinh(){
         if (!schemeChart) {
             return;
         }
@@ -820,7 +868,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         });
     }
 
-    function setSchemeSpotlight(eyebrow, name, value, color){
+    function cap_nhat_tam_nhin_chuong_trinh(eyebrow, name, value, color){
         if (!schemeChart) {
             return;
         }
@@ -839,7 +887,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         schemeChart.style.setProperty('--scheme-active-color', color || 'rgba(22, 131, 164, 0.16)');
     }
 
-    function renderSchemeChart(items){
+    function ve_bieu_do_chuong_trinh(items){
         if (!schemeChart) {
             return;
         }
@@ -872,10 +920,10 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             var sweep = ratio * 360;
             var endAngle = startAngle + sweep;
             var color = schemePalette[index % schemePalette.length];
-            var label = esc(item.TENCTVAY || 'Không rõ CT vay');
-            var valueText = fmt(value);
+            var label = ma_hoa_html(item.TENCTVAY || 'Không rõ CT vay');
+            var valueText = dinh_dang_so_trieu(value);
 
-            slicesHtml += '<path class="scheme-slice" data-scheme-index="' + index + '" fill="' + color + '" tabindex="0" d="' + describeDonutSlice(cx, cy, outerRadius, innerRadius, startAngle, endAngle) + '"><title>' + label + ': ' + valueText + '</title></path>';
+            slicesHtml += '<path class="scheme-slice" data-scheme-index="' + index + '" fill="' + color + '" tabindex="0" d="' + mo_ta_lat_cat_donut(cx, cy, outerRadius, innerRadius, startAngle, endAngle) + '"><title>' + label + ': ' + valueText + '</title></path>';
             legendHtml += '<button type="button" class="scheme-legend__item" data-scheme-index="' + index + '">'
                 + '<span class="scheme-legend__dot" style="background:' + color + '"></span>'
                 + '<span class="scheme-legend__copy">'
@@ -896,7 +944,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             + '    <div class="scheme-spotlight">'
             + '        <span class="scheme-spotlight__eyebrow">Tổng dư nợ</span>'
             + '        <strong class="scheme-spotlight__name">Danh mục vay</strong>'
-            + '        <span class="scheme-spotlight__value">' + fmt(total) + '</span>'
+            + '        <span class="scheme-spotlight__value">' + dinh_dang_so_trieu(total) + '</span>'
             + '    </div>'
             + '</div>'
             + '<div class="scheme-chart__legend">' + legendHtml + '</div>';
@@ -905,16 +953,16 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             if (!item) {
                 return;
             }
-            clearSchemeActive();
+            xoa_trang_thai_chuong_trinh();
             schemeChart.querySelectorAll('[data-scheme-index="' + index + '"]').forEach(function(node){
                 node.classList.add('is-active');
             });
-            setSchemeSpotlight('Chương trình vay', item.TENCTVAY || 'Không rõ CT vay', fmt(item.DUNO || 0), schemePalette[index % schemePalette.length]);
+            cap_nhat_tam_nhin_chuong_trinh('Chương trình vay', item.TENCTVAY || 'Không rõ CT vay', dinh_dang_so_trieu(item.DUNO || 0), schemePalette[index % schemePalette.length]);
         }
 
         function reset(){
-            clearSchemeActive();
-            setSchemeSpotlight('Tổng dư nợ', 'Danh mục vay', fmt(total), 'rgba(22, 131, 164, 0.16)');
+            xoa_trang_thai_chuong_trinh();
+            cap_nhat_tam_nhin_chuong_trinh('Tổng dư nợ', 'Danh mục vay', dinh_dang_so_trieu(total), 'rgba(22, 131, 164, 0.16)');
         }
 
         schemeChart.querySelectorAll('[data-scheme-index]').forEach(function(node){
@@ -943,7 +991,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         reset();
     }
 
-    function renderSummaryList(target, items, kind){
+    function ve_danh_sach_tom_tat(target, items, kind){
         if (!target) {
             return;
         }
@@ -959,8 +1007,8 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         var html = '';
 
         items.forEach(function(item){
-            var code = esc(item[codeKey] || '');
-            var name = esc(item[nameKey] || '');
+            var code = ma_hoa_html(item[codeKey] || '');
+            var name = ma_hoa_html(item[nameKey] || '');
             html += '<button type="button" class="summary-item ' + modifier + '" data-kind="' + kind + '" data-key="' + code + '">'
                 + '<span class="summary-item__top">'
                 + '<span class="summary-item__code">' + code + '</span>'
@@ -968,9 +1016,11 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                 + '</span>'
                 + '<span class="summary-item__name" title="' + name + '">' + name + '</span>'
                 + '<span class="summary-item__metrics">'
-                + '<span class="summary-item__metric"><strong>' + fmt(item.DUNO) + '</strong><small>Dư nợ</small></span>'
-                + '<span class="summary-item__metric"><strong>' + fmt(item.DNQH) + '</strong><small>DNQH</small></span>'
-                + '<span class="summary-item__metric"><strong>' + fmt(item.DNKH) + '</strong><small>DNKH</small></span>'
+                + '<span class="summary-item__metric"><strong>' + dinh_dang_so_trieu(item.DUNO) + '</strong><small>Dư nợ</small></span>'
+                + '<span class="summary-item__metric"><strong>' + dinh_dang_so_trieu(item.DNQH) + '</strong><small>DNQH</small></span>'
+                + '<span class="summary-item__metric"><strong>' + dinh_dang_so_trieu(item.DNKH) + '</strong><small>DNKH</small></span>'
+                + '<span class="summary-item__metric"><strong>' + dinh_dang_so_trieu(item.CHOVAY) + '</strong><small>DS cho vay</small></span>'
+                + '<span class="summary-item__metric"><strong>' + dinh_dang_so_trieu(item.THUNO) + '</strong><small>DS thu nợ</small></span>'
                 + '</span>'
                 + '</button>';
         });
@@ -978,29 +1028,31 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         target.innerHTML = html;
     }
 
-    function renderDetailRows(items){
+    function ve_dong_chi_tiet(items){
         if (!detailBody) {
             return;
         }
         if (!items || items.length === 0) {
-            detailBody.innerHTML = '<tr><td colspan="4" class="empty-row">Không có dữ liệu chi tiết.</td></tr>';
+            detailBody.innerHTML = '<tr><td colspan="6" class="empty-row">Không có dữ liệu chi tiết.</td></tr>';
             return;
         }
 
         var html = '';
         items.forEach(function(item){
-            var scheme = esc(item.TENCTVAY || 'Không rõ CT vay');
+            var scheme = ma_hoa_html(item.TENCTVAY || 'Không rõ CT vay');
             html += '<tr>'
                 + '<td title="' + scheme + '">' + scheme + '</td>'
-                + '<td class="num">' + fmt(item.DUNO) + '</td>'
-                + '<td class="num">' + fmt(item.DNQH) + '</td>'
-                + '<td class="num">' + fmt(item.DNKH) + '</td>'
+                + '<td class="num">' + dinh_dang_so_trieu(item.DUNO) + '</td>'
+                + '<td class="num">' + dinh_dang_so_trieu(item.DNQH) + '</td>'
+                + '<td class="num">' + dinh_dang_so_trieu(item.DNKH) + '</td>'
+                + '<td class="num">' + dinh_dang_so_trieu(item.CHOVAY) + '</td>'
+                + '<td class="num">' + dinh_dang_so_trieu(item.THUNO) + '</td>'
                 + '</tr>';
         });
         detailBody.innerHTML = html;
     }
 
-    function closeDetail(){
+    function dong_chi_tiet(){
         if (!detailModal) {
             return;
         }
@@ -1009,7 +1061,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         document.body.classList.remove('modal-open');
     }
 
-    function openDetail(kind, key){
+    function mo_chi_tiet(kind, key){
         if (!currentData) {
             return;
         }
@@ -1027,18 +1079,20 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
         detailKicker.textContent = isPos ? 'Chi tiết theo PGD' : 'Chi tiết theo xã';
         detailTitle.textContent = detail.NAME || fallbackTitle;
         detailSubtitle.textContent = isPos ? ('Mã POS: ' + key) : ('Mã xã: ' + key);
-        detailDuno.textContent = fmt(totals.DUNO || 0);
-        detailDnqh.textContent = fmt(totals.DNQH || 0);
-        detailDnkh.textContent = fmt(totals.DNKH || 0);
-        detailSchemeCount.textContent = fmt(detail.SCHEME_COUNT || 0);
-        renderDetailRows(detail.ITEMS || []);
+        detailDuno.textContent = dinh_dang_so_trieu(totals.DUNO || 0);
+        detailDnqh.textContent = dinh_dang_so_trieu(totals.DNQH || 0);
+        detailDnkh.textContent = dinh_dang_so_trieu(totals.DNKH || 0);
+        detailChovay.textContent = dinh_dang_so_trieu(totals.CHOVAY || 0);
+        detailThuno.textContent = dinh_dang_so_trieu(totals.THUNO || 0);
+        detailSchemeCount.textContent = dinh_dang_so(detail.SCHEME_COUNT || 0);
+        ve_dong_chi_tiet(detail.ITEMS || []);
 
         detailModal.classList.add('is-open');
         detailModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
     }
 
-    function bindListEvents(target){
+    function gan_su_kien_danh_sach(target){
         if (!target) {
             return;
         }
@@ -1047,26 +1101,26 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             if (!button) {
                 return;
             }
-            openDetail(button.getAttribute('data-kind'), button.getAttribute('data-key'));
+            mo_chi_tiet(button.getAttribute('data-kind'), button.getAttribute('data-key'));
         });
     }
 
-    function setSource(source){
-        currentSource = normalizeSource(source);
+    function dat_nguon_von(source){
+        currentSource = chuan_hoa_nguon(source);
         if (sourceInput) {
             sourceInput.value = currentSource;
         }
-        renderSourceToolbar(currentData ? currentData.source_totals : null);
+        ve_bo_loc_nguon(currentData ? currentData.source_totals : null);
     }
 
-    bindListEvents(posList);
-    bindListEvents(xaList);
+    gan_su_kien_danh_sach(posList);
+    gan_su_kien_danh_sach(xaList);
 
     if (searchForm) {
         searchForm.addEventListener('submit', function(event){
             event.preventDefault();
-            syncUrl();
-            fetchData();
+            dong_bo_url();
+            tai_du_lieu();
         });
     }
 
@@ -1076,9 +1130,9 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             if (!button) {
                 return;
             }
-            setSource(button.getAttribute('data-source'));
-            syncUrl();
-            fetchData();
+            dat_nguon_von(button.getAttribute('data-source'));
+            dong_bo_url();
+            tai_du_lieu();
         });
     }
 
@@ -1087,46 +1141,46 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             if (currentSource === 'ALL') {
                 return;
             }
-            setSource('ALL');
-            syncUrl();
-            fetchData();
+            dat_nguon_von('ALL');
+            dong_bo_url();
+            tai_du_lieu();
         });
     }
 
     if (detailCloseBtn) {
-        detailCloseBtn.addEventListener('click', closeDetail);
+        detailCloseBtn.addEventListener('click', dong_chi_tiet);
     }
     if (detailBackdrop) {
-        detailBackdrop.addEventListener('click', closeDetail);
+        detailBackdrop.addEventListener('click', dong_chi_tiet);
     }
     document.addEventListener('keydown', function(event){
         if (event.key === 'Escape') {
-            closeDetail();
+            dong_chi_tiet();
         }
     });
 
-    function fetchData(){
-        setLoading(true);
-        clearError();
+    function tai_du_lieu(){
+        bat_trang_thai_tai(true);
+        xoa_loi();
 
-        fetch(buildUrl(true), { cache: 'no-store' })
+        fetch(tao_url(true), { cache: 'no-store' })
             .then(function(response){
                 return response.ok ? response.json() : null;
             })
             .then(function(payload){
                 if (!payload) {
-                    showError('Không tải được dữ liệu.');
-                    renderSummaryList(posList, [], 'pos');
-                    renderSummaryList(xaList, [], 'xa');
-                    renderSchemeChart([]);
+                    hien_thi_loi('Không tải được dữ liệu.');
+                    ve_danh_sach_tom_tat(posList, [], 'pos');
+                    ve_danh_sach_tom_tat(xaList, [], 'xa');
+                    ve_bieu_do_chuong_trinh([]);
                     return;
                 }
 
                 if (!payload.ok) {
-                    showError(payload.error || 'Lỗi truy vấn.');
-                    renderSummaryList(posList, [], 'pos');
-                    renderSummaryList(xaList, [], 'xa');
-                    renderSchemeChart([]);
+                    hien_thi_loi(payload.error || 'Lỗi truy vấn.');
+                    ve_danh_sach_tom_tat(posList, [], 'pos');
+                    ve_danh_sach_tom_tat(xaList, [], 'xa');
+                    ve_bieu_do_chuong_trinh([]);
                     return;
                 }
 
@@ -1135,51 +1189,51 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                 }
 
                 currentData = payload.data || {};
-                setSource(currentData.active_source || currentSource);
-                closeDetail();
+                dat_nguon_von(currentData.active_source || currentSource);
+                dong_chi_tiet();
 
                 var totals = currentData.totals || {};
-                cards.DUNO.textContent = fmt(totals.DUNO);
-                cards.DNQH.textContent = fmt(totals.DNQH);
-                cards.DNTH.textContent = fmt(totals.DNTH);
-                cards.DNKH.textContent = fmt(totals.DNKH);
-                cards.CHOVAY.textContent = fmt(totals.CHOVAY);
-                cards.THUNO.textContent = fmt(totals.THUNO);
+                cards.DUNO.textContent = dinh_dang_so_trieu(totals.DUNO);
+                cards.DNQH.textContent = dinh_dang_so_trieu(totals.DNQH);
+                cards.DNTH.textContent = dinh_dang_so_trieu(totals.DNTH);
+                cards.DNKH.textContent = dinh_dang_so_trieu(totals.DNKH);
+                cards.CHOVAY.textContent = dinh_dang_so_trieu(totals.CHOVAY);
+                cards.THUNO.textContent = dinh_dang_so_trieu(totals.THUNO);
                 if (metaTotal) {
-                    metaTotal.textContent = fmt(currentData.total_rows || 0);
+                    metaTotal.textContent = dinh_dang_so(currentData.total_rows || 0);
                 }
                 if (metaKh) {
-                    metaKh.textContent = fmt(currentData.total_kh || 0);
+                    metaKh.textContent = dinh_dang_so(currentData.total_kh || 0);
                 }
 
-                renderSourceToolbar(currentData.source_totals || {});
+                ve_bo_loc_nguon(currentData.source_totals || {});
 
                 var posItems = currentData.pos_list || [];
                 var xaItems = currentData.xa_list || [];
                 if (posCount) {
-                    posCount.textContent = fmt(posItems.length) + ' dòng';
+                    posCount.textContent = dinh_dang_so(posItems.length) + ' dòng';
                 }
                 if (xaCount) {
-                    xaCount.textContent = fmt(xaItems.length) + ' dòng';
+                    xaCount.textContent = dinh_dang_so(xaItems.length) + ' dòng';
                 }
 
-                renderSummaryList(posList, posItems, 'pos');
-                renderSummaryList(xaList, xaItems, 'xa');
-                renderSchemeChart(currentData.top_scheme || []);
+                ve_danh_sach_tom_tat(posList, posItems, 'pos');
+                ve_danh_sach_tom_tat(xaList, xaItems, 'xa');
+                ve_bieu_do_chuong_trinh(currentData.top_scheme || []);
             })
             .catch(function(){
-                showError('Lỗi kết nối khi tải dữ liệu.');
-                renderSummaryList(posList, [], 'pos');
-                renderSummaryList(xaList, [], 'xa');
-                renderSchemeChart([]);
+                hien_thi_loi('Lỗi kết nối khi tải dữ liệu.');
+                ve_danh_sach_tom_tat(posList, [], 'pos');
+                ve_danh_sach_tom_tat(xaList, [], 'xa');
+                ve_bieu_do_chuong_trinh([]);
             })
             .finally(function(){
-                setLoading(false);
+                bat_trang_thai_tai(false);
             });
     }
 
-    renderSourceToolbar(null);
-    fetchData();
+    ve_bo_loc_nguon(null);
+    tai_du_lieu();
 })();
 </script>
 </body>
