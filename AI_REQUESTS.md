@@ -45,8 +45,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: index.php 
 - Mục tiêu: khắc phục lỗi/ edit trang chính
 - Yêu cầu chi tiết:
@@ -69,7 +69,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - Ưu tiên:  
 - File liên quan: CODE.SQL
 - Mục tiêu: Tìm kiếm nguyên nhân và phân tích TẠI SAO LẠI THIẾU SỐ LIỆU
-- Yêu cầu chi tiết: KHI TÔI XUẤT THÌ SỐ LIỆU LẠI THIẾU 1 ÍT SAO VỚI DỮ LIỆU TỔNG TÔI CÓ. vỀ PHẦN TỔNG DƯ NỢ
+- Yêu cầu chi tiết: KHI TÔI XUẤT THÌ SỐ LIỆU DƯ NỢ LẠI THIẾU 1 ÍT SAO VỚI DỮ LIỆU TỔNG TÔI CÓ. vỀ PHẦN TỔNG DƯ NỢ
 - Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
 - Kết quả mong muốn: có thể chạy dc - DONE và không ERROR
 - Cách kiểm tra: KHÔNG
@@ -93,14 +93,12 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: 
-- Ưu tiên: 
-- File liên quan: DGX.PHP, dgx_report_layout,dgx_sql.php, view/..
-- Mục tiêu: xuất báo cáo không thể hiện tên GDV
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: `DGX.PHP`, `dgx_report_layout.php`,`dgx_sql.php`, `view/..`, `DGX.MD`
+- Mục tiêu: bổ sung dữ liệu trên cột bảng
 - Yêu cầu chi tiết: 
-    + đọc code gửi kèm
-    + xử lý lỗi không thể hiện tên GDV
-    + dựa vào code mới có tối ưu dc các code còn lại không? nếu có thì cập nhật là update giúp, không ảnh hưởng tới các chức năng khác
+    - Tại `Báo cáo theo yêu cầu ` tôi muốn bổ sung thêm cột `Mã Điểm GDX` lấy `Ma_diem_gdx`
 - Không được đụng vào: các thư mục khác
 - Kết quả mong muốn: xử lý các vấn đề nêu trên
 - Cách kiểm tra: vào DGX xem nội dung bên trong, nhấnn "Báo cáo theo yêu cầu" - nhập, báo cáo sẽ ra kết quả

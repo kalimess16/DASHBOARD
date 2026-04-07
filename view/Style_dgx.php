@@ -421,7 +421,7 @@ tbody tr:hover td { background: #ffeab7; }
     width: min(96vw, 1560px);
 }
 .custom-report-table {
-    min-width: 1480px;
+    min-width: 1600px;
     table-layout: auto;
 }
 .custom-report-table th,
@@ -431,21 +431,23 @@ tbody tr:hover td { background: #ffeab7; }
 }
 .custom-report-table th:nth-child(3),
 .custom-report-table td:nth-child(3),
-.custom-report-table th:nth-child(4),
-.custom-report-table td:nth-child(4) {
+.custom-report-table th:nth-child(5),
+.custom-report-table td:nth-child(5) {
     white-space: normal;
     word-break: break-word;
 }
 .custom-report-table th:nth-child(1),
 .custom-report-table td:nth-child(1),
 .custom-report-table th:nth-child(2),
-.custom-report-table td:nth-child(2) {
+.custom-report-table td:nth-child(2),
+.custom-report-table th:nth-child(4),
+.custom-report-table td:nth-child(4) {
     text-align: center;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
-.custom-report-table th:nth-child(n+5),
-.custom-report-table td:nth-child(n+5) {
+.custom-report-table th:nth-child(n+6),
+.custom-report-table td:nth-child(n+6) {
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;

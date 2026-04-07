@@ -1,5 +1,10 @@
 # DGX
 
+## Cap nhat 2026-04-07
+
+- Bao cao theo yeu cau da bo sung cot `Ma Diem GDX` tren popup va trong file Excel xuat ra.
+- SQL custom report da tra them truong `MA_DIEM_GDX` de dong bo giua man hinh va file xuat.
+
 ## Cap nhat 2026-04-01
 
 - Trang DGX da bo sung nut `Bao cao theo yeu cau` ben canh `Danh sach diem co dinh`.
