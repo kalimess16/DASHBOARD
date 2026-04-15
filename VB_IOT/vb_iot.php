@@ -832,6 +832,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 <link rel="stylesheet" href="../view/Styple_vb_iot.php?page=index">
 </head>
 <body>
+<?php dashboard_render_loading_chung(); ?>
 <div class="container">
     <h1 class="page-title"><a href="<?php echo $index_url; ?>">Danh Sách Văn Bản VBSP-CN 34</a></h1>
 
@@ -1124,8 +1125,24 @@ if (session_status() === PHP_SESSION_ACTIVE) {
             var submitter = event.submitter || null;
             var isMarkAll = submitter && submitter.name === 'mark_all_read';
             searchPageInput.value = isMarkAll ? '<?php echo $page; ?>' : '1';
+            if (window.DashboardLoading) {
+                window.DashboardLoading.show();
+            }
         });
     }
+    document.querySelectorAll('.reset-read-form').forEach(function (resetForm) {
+        resetForm.addEventListener('submit', function () {
+            if (window.DashboardLoading) {
+                window.DashboardLoading.show();
+            }
+        });
+    });
+    document.addEventListener('click', function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('.pagination a') : null;
+        if (link && window.DashboardLoading && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.target !== '_blank') {
+            window.DashboardLoading.show();
+        }
+    });
 })();
 </script>
 <script>

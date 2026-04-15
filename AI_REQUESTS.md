@@ -93,8 +93,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: `DGX.PHP`, `dgx_report_layout.php`,`dgx_sql.php`, `view/..`, `DGX.MD`
 - Mục tiêu: bổ sung dữ liệu trên cột bảng
 - Yêu cầu chi tiết: 
@@ -116,7 +116,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP, view/..
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 
-    + số liệu thì round(x/ 1000000, 2) lại cho gọn số
+    + XEM ẢNH
+    + SẮP XẾP LẠI MÃ XÃ TĂNG DẦN, KHÔNG LẤY THEO TOP NỮA
 - Không được đụng vào: các chức năng không liện quan
 - Kết quả mong muốn: khắc phục toàn bộ các yêu cầu trên
 - Cách kiểm tra: vào chức năng home page sẽ thấy được đúng số liệu

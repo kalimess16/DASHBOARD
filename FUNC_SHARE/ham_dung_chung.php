@@ -121,6 +121,257 @@ function dashboard_html(string $giaTri): string
     return htmlspecialchars($giaTri, ENT_QUOTES, 'UTF-8');
 }
 
+function dashboard_duong_dan_gif_loading(): string
+{
+    return dashboard_duong_dan_goc('LOADDING.gif');
+}
+
+function dashboard_render_loading_chung(array $options = []): void
+{
+    static $daRender = false;
+    if ($daRender) {
+        return;
+    }
+    $daRender = true;
+
+    $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string)($options['id'] ?? 'dashboardLoadingOverlay')) ?: 'dashboardLoadingOverlay';
+    $message = (string)($options['message'] ?? html_entity_decode('&#272;ang l&#7845;y s&#7889; li&#7879;u', ENT_QUOTES, 'UTF-8'));
+    $detail = (string)($options['detail'] ?? html_entity_decode('Vui l&#242;ng ch&#7901; trong gi&#226;y l&#225;t.', ENT_QUOTES, 'UTF-8'));
+    $imageUrl = (string)($options['image_url'] ?? dashboard_duong_dan_gif_loading());
+    $autoFetch = array_key_exists('auto_fetch', $options) ? (bool)$options['auto_fetch'] : true;
+    ?>
+<style id="dashboard-loading-common-style">
+.dashboard-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(13, 20, 31, 0.48);
+    backdrop-filter: blur(2px);
+}
+.dashboard-loading-overlay[hidden] {
+    display: none !important;
+}
+.dashboard-loading-dialog {
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dashboard-loading-image {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    display: block;
+}
+.dashboard-loading-title,
+.dashboard-loading-detail {
+    display: none !important;
+}
+@media (max-width: 520px) {
+    .dashboard-loading-image {
+        width: 118px;
+        height: 118px;
+    }
+}
+</style>
+<div
+    class="dashboard-loading-overlay"
+    id="<?php echo dashboard_html($id); ?>"
+    data-auto-fetch="<?php echo $autoFetch ? '1' : '0'; ?>"
+    role="alert"
+    aria-live="assertive"
+    aria-busy="true"
+    hidden
+>
+    <div class="dashboard-loading-dialog">
+        <img class="dashboard-loading-image" src="<?php echo dashboard_html($imageUrl); ?>" alt="">
+        <div class="dashboard-loading-title" data-dashboard-loading-title><?php echo dashboard_html($message); ?></div>
+        <div class="dashboard-loading-detail" data-dashboard-loading-detail><?php echo dashboard_html($detail); ?></div>
+    </div>
+</div>
+<script id="dashboard-loading-common-script">
+(function () {
+    var overlay = document.getElementById(<?php echo json_encode($id, JSON_UNESCAPED_UNICODE); ?>);
+    if (!overlay || (window.DashboardLoading && window.DashboardLoading.ready)) {
+        return;
+    }
+
+    var titleNode = overlay.querySelector('[data-dashboard-loading-title]');
+    var detailNode = overlay.querySelector('[data-dashboard-loading-detail]');
+    var defaultTitle = titleNode ? titleNode.textContent : 'Dang lay so lieu';
+    var defaultDetail = detailNode ? detailNode.textContent : '';
+    var activeCount = 0;
+    var nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+
+    function normalizeOptions(options) {
+        if (typeof options === 'string') {
+            return { title: options };
+        }
+        return options && typeof options === 'object' ? options : {};
+    }
+
+    function setText(options) {
+        var opts = normalizeOptions(options);
+        var title = opts.title || opts.message || defaultTitle;
+        var detail = opts.detail || defaultDetail;
+        if (titleNode) {
+            titleNode.textContent = title;
+        }
+        if (detailNode) {
+            detailNode.textContent = detail;
+            detailNode.style.display = detail === '' ? 'none' : '';
+        }
+    }
+
+    function show(options) {
+        activeCount += 1;
+        setText(options);
+        overlay.hidden = false;
+        overlay.classList.add('is-visible');
+        return activeCount;
+    }
+
+    function hide(force) {
+        activeCount = force === true ? 0 : Math.max(0, activeCount - 1);
+        if (activeCount > 0) {
+            return activeCount;
+        }
+        overlay.classList.remove('is-visible');
+        overlay.hidden = true;
+        setText({});
+        return activeCount;
+    }
+
+    function cloneFetchInit(init) {
+        if (!init || typeof init !== 'object') {
+            return init;
+        }
+        var copy = {};
+        Object.keys(init).forEach(function (key) {
+            if (key !== 'dashboardLoading') {
+                copy[key] = init[key];
+            }
+        });
+        return copy;
+    }
+
+    function wrapResponseBody(response, release) {
+        if (!response || typeof response !== 'object') {
+            release();
+            return response;
+        }
+
+        var releaseTimer = window.setTimeout(release, 0);
+        ['arrayBuffer', 'blob', 'formData', 'json', 'text'].forEach(function (method) {
+            if (typeof response[method] !== 'function') {
+                return;
+            }
+            var original = response[method].bind(response);
+            try {
+                response[method] = function () {
+                    if (releaseTimer !== null) {
+                        window.clearTimeout(releaseTimer);
+                        releaseTimer = null;
+                    }
+                    var result;
+                    try {
+                        result = original.apply(response, arguments);
+                    } catch (error) {
+                        release();
+                        throw error;
+                    }
+                    if (result && typeof result.finally === 'function') {
+                        return result.finally(release);
+                    }
+                    release();
+                    return result;
+                };
+            } catch (error) {
+                release();
+            }
+        });
+
+        return response;
+    }
+
+    function track(promise, options) {
+        show(options);
+        return Promise.resolve(promise).then(function (value) {
+            hide();
+            return value;
+        }, function (error) {
+            hide();
+            throw error;
+        });
+    }
+
+    function fetchWithLoading(input, init, options) {
+        if (!nativeFetch) {
+            return Promise.reject(new Error('Fetch API is not available.'));
+        }
+
+        var loadingOptions = options;
+        var fetchInit = init;
+        if (fetchInit && typeof fetchInit === 'object' && Object.prototype.hasOwnProperty.call(fetchInit, 'dashboardLoading')) {
+            loadingOptions = fetchInit.dashboardLoading;
+            fetchInit = cloneFetchInit(fetchInit);
+        }
+        if (loadingOptions === false) {
+            return nativeFetch(input, fetchInit);
+        }
+
+        var released = false;
+        function release() {
+            if (released) {
+                return;
+            }
+            released = true;
+            hide();
+        }
+
+        show(loadingOptions);
+        return nativeFetch(input, fetchInit).then(function (response) {
+            return wrapResponseBody(response, release);
+        }, function (error) {
+            release();
+            throw error;
+        });
+    }
+
+    window.DashboardLoading = {
+        ready: true,
+        show: show,
+        hide: hide,
+        forceHide: function () { return hide(true); },
+        setText: setText,
+        track: track,
+        fetch: fetchWithLoading
+    };
+
+    if (nativeFetch && overlay.getAttribute('data-auto-fetch') === '1' && !window.__dashboardLoadingFetchWrapped) {
+        window.__dashboardLoadingFetchWrapped = true;
+        window.fetch = function (input, init) {
+            return fetchWithLoading(input, init);
+        };
+    }
+
+    window.addEventListener('pageshow', function () {
+        hide(true);
+    });
+})();
+</script>
+    <?php
+}
 function dashboard_phan_hoi_json(array $duLieu, int $maTrangThai = 200): void
 {
     http_response_code($maTrangThai);

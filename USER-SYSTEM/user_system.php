@@ -471,6 +471,7 @@ if ($page > 1) {
 <link rel="stylesheet" href="../view/Style_user_system.php">
 </head>
 <body>
+<?php dashboard_render_loading_chung(); ?>
 <div class="container">
     <header class="hero">
         <div class="hero-copy">
@@ -752,6 +753,13 @@ if ($page > 1) {
     var quickFilter = document.getElementById('quickFilter');
     var tableBody = document.getElementById('userTableBody');
     var passwordInput = document.getElementById('password');
+    var filterForm = document.getElementById('filterForm');
+
+    function showDashboardLoading() {
+        if (window.DashboardLoading) {
+            window.DashboardLoading.show();
+        }
+    }
 
     function trimValue(value) {
         return String(value || '').trim();
@@ -779,20 +787,34 @@ if ($page > 1) {
             if (saveBtn) {
                 saveBtn.disabled = true;
             }
+            showDashboardLoading();
         });
+    }
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', showDashboardLoading);
     }
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
+            showDashboardLoading();
             window.location.href = '<?php echo $index_url; ?>';
         });
     }
 
     if (reloadBtn) {
         reloadBtn.addEventListener('click', function () {
+            showDashboardLoading();
             window.location.reload();
         });
     }
+
+    document.addEventListener('click', function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('.pagination a, .row-link, .hero-actions a') : null;
+        if (link && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.target !== '_blank') {
+            showDashboardLoading();
+        }
+    });
 
     if (quickFilter && tableBody) {
         quickFilter.addEventListener('input', function () {

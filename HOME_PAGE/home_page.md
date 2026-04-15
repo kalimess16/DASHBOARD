@@ -46,3 +46,7 @@
 - Function custom trong home_page.php và home_page_sql.php đã đổi sang tên tiếng Việt không dấu để dễ đọc và bảo trì.
 
 - Các chỉ tiêu tiền đang hiển thị theo đơn vị triệu đồng, làm tròn theo round(x / 1000000, 2) để gọn số.
+
+## Cập nhật 2026-04-13
+
+- Danh sách theo Xã sắp xếp theo `MAXA` tăng dần, không còn hiển thị theo thứ tự dư nợ giảm dần như dạng top.

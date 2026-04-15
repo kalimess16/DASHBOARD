@@ -320,7 +320,11 @@ function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $
     $posList = array_values($byPos);
     $xaList = array_values($byXa);
     usort($posList, fn($a, $b) => $b['DUNO'] <=> $a['DUNO']);
-    usort($xaList, fn($a, $b) => $b['DUNO'] <=> $a['DUNO']);
+    usort(
+        $xaList,
+        fn($a, $b) => strcmp((string)($a['MAXA'] ?? ''), (string)($b['MAXA'] ?? ''))
+            ?: strcmp((string)($a['TENXA'] ?? ''), (string)($b['TENXA'] ?? ''))
+    );
 
     $detailsByPos = lap_chi_tiet_theo_don_vi($schemeRows, 'MAPOS', 'TENPOS');
     $detailsByXa = lap_chi_tiet_theo_don_vi($schemeRows, 'MAXA', 'TENXA');
@@ -383,6 +387,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
 <link rel="stylesheet" href="../view/Style_home_page.php">
 </head>
 <body>
+<?php dashboard_render_loading_chung(['auto_fetch' => false]); ?>
 <div class="page-shell">
     <section class="top-layout">
         <div class="top-stack">
@@ -411,7 +416,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
             </form>
 
             <div id="errorBox" class="error-box" style="display:none;"></div>
-            <div class="loading" id="loadingBox" role="status" aria-live="polite">
+            <div class="loading" id="loadingBox" role="status" aria-live="polite" style="display:none;">
                 <div class="loading-badge">Đang lấy số liệu</div>
                 <div class="loading-head">
                     <div class="spinner" aria-hidden="true"></div>
@@ -534,7 +539,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
                 </div>
                 <span class="panel-count" id="xaCount">0 dòng</span>
             </div>
-            <p class="panel-note">Khối bên phải tổng hợp theo xã, hiển thị thêm dư nợ, DNQH, DNKH, DS cho vay và DS thu nợ.</p>
+            <p class="panel-note">Khối bên phải tổng hợp theo xã, sắp xếp mã xã tăng dần và hiển thị thêm dư nợ, DNQH, DNKH, DS cho vay, DS thu nợ.</p>
             <div id="xaList" class="summary-list">
                 <div class="empty-box">Đang tải dữ liệu...</div>
             </div>
@@ -698,6 +703,17 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
     }
 
     function bat_trang_thai_tai(isLoading){
+        if (window.DashboardLoading) {
+            if (loadingBox) {
+                loadingBox.style.display = 'none';
+            }
+            if (isLoading) {
+                window.DashboardLoading.show();
+            } else {
+                window.DashboardLoading.hide();
+            }
+            return;
+        }
         if (loadingBox) {
             loadingBox.style.display = isLoading ? 'flex' : 'none';
         }

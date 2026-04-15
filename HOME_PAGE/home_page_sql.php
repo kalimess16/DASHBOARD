@@ -37,11 +37,11 @@ function sql_nen_home_page(bool $apDungLocNguonVon = true): string
             {$phanLoaiNguonVon} AS NGUON_VON
         FROM HSCV_DAILY h
         LEFT JOIN DMPOS p ON p.PO_MA = h.KU_MAPGD
-        LEFT JOIN DMXA x ON x.MA = SUBSTR(h.KU_MADP, 1, 6) AND x.GDXFLG = 'Y'
+        LEFT JOIN DMXA x ON x.MA = SUBSTR(h.KU_MADP, 1, 6) AND x.GDXFLG = 'Y' AND x.PGD_QL = h.KU_MAPGD
         LEFT JOIN DM_SCHEME s ON s.SC_MA = h.KU_SCHEM_CD
         WHERE h.KU_NGAYBC = TO_DATE(:P_NGAYBC, 'DD/MM/YYYY')
           AND (
-              :P_MAPOS IS NULL
+              :p_mapos is null
               OR SUBSTR(:P_MAPOS, 3, 2) = '00'
               OR h.KU_MAPGD = '00' || :P_MAPOS
           )
@@ -130,7 +130,7 @@ function sql_chuong_trinh_vay_home_page(): string
             CHOVAY,
             THUNO
         FROM (" . sql_nhom_chuong_trinh_vay_home_page() . ")
-        ORDER BY MAPOS, MAXA, TENCTVAY
+        ORDER BY MAXA, mapos, TENCTVAY
     ";
 }
 

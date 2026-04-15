@@ -86,6 +86,7 @@ if ($position_rows === null && $query_error === '') {
 <link rel="stylesheet" href="../view/Style_user_system.php">
 </head>
 <body>
+<?php dashboard_render_loading_chung(); ?>
 <div class="container">
     <header class="hero">
         <div class="hero-copy">
@@ -231,6 +232,12 @@ if ($position_rows === null && $query_error === '') {
     var saveBtn = document.getElementById('saveBtn');
     var resetBtn = document.getElementById('resetBtn');
 
+    function showDashboardLoading() {
+        if (window.DashboardLoading) {
+            window.DashboardLoading.show();
+        }
+    }
+
     if (form) {
         form.addEventListener('submit', function (event) {
             if (!window.confirm('Bạn có xác nhận muốn thêm mới user này không?')) {
@@ -243,14 +250,23 @@ if ($position_rows === null && $query_error === '') {
             if (saveBtn) {
                 saveBtn.disabled = true;
             }
+            showDashboardLoading();
         });
     }
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
+            showDashboardLoading();
             window.location.href = '<?php echo $insert_url; ?>';
         });
     }
+
+    document.addEventListener('click', function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('.hero-actions a') : null;
+        if (link && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.target !== '_blank') {
+            showDashboardLoading();
+        }
+    });
 })();
 </script>
 </body>

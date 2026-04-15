@@ -676,6 +676,7 @@ if ($page > 1) $canonical_params['page'] = $page;
 <link rel="stylesheet" href="../view/Style_dgx.php">
 </head>
 <body>
+<?php dashboard_render_loading_chung(); ?>
 <div class="container">
     <h1 class="page-title"><a href="<?php echo $index_url; ?>">Tổng hợp các DGX</a></h1>
 
@@ -828,8 +829,20 @@ if ($page > 1) $canonical_params['page'] = $page;
     var form = document.querySelector('.search-form');
     var searchPageInput = document.getElementById('search_page');
     if (!form || !searchPageInput) return;
+    function showPageLoading() {
+        if (window.DashboardLoading) {
+            window.DashboardLoading.show();
+        }
+    }
     form.addEventListener('submit', function () {
         searchPageInput.value = '1';
+        showPageLoading();
+    });
+    document.addEventListener('click', function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('.pagination a') : null;
+        if (link && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.target !== '_blank') {
+            showPageLoading();
+        }
     });
 })();
 </script>
