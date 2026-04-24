@@ -235,7 +235,7 @@ function dgx_report_sql(): string
             )
         SELECT DISTINCT
             AA.ma_pgd AS MAPOS,
-            NVL(TRIM(CB.HO_TEN), TRIM(CIN.HO_TEN)) AS TEN_GDV,
+            us.IU_TEN AS TEN_GDV,
             gg.ten_dgd AS DIEM_GDX,
             cc.soto AS TO_TN,
             cc.soku AS SO_KU,
@@ -246,8 +246,7 @@ function dgx_report_sql(): string
             ff.guitk AS GUITK,
             ff.ruttk AS RUTTK
         FROM AA
-        LEFT JOIN CHUAN_HOA_TK_INTELLECT cb ON UPPER(TRIM(CB.MA_CB)) = UPPER(TRIM(AA.GDV))
-        LEFT JOIN CHUAN_HOA_TK_INTELLECT cin ON UPPER(TRIM(CIN.USER_INTELLECT)) = UPPER(TRIM(AA.GDV))
+        LEFT JOIN I_USER us ON UPPER(TRIM(us.IU_MA)) = UPPER(TRIM(AA.GDV)) 
         LEFT JOIN TK_G cc ON aa.gdv = cc.gdv AND aa.ma_pgd = cc.ma_pgd AND aa.ma_diem_gdx = cc.ma_diem_gdx
         LEFT JOIN GN bb ON aa.gdv = bb.gdv AND aa.ma_pgd = bb.ma_pgd AND aa.ma_diem_gdx = bb.ma_diem_gdx
         LEFT JOIN TK_TM dd ON aa.gdv = dd.gdv AND aa.ma_pgd = dd.ma_pgd AND aa.ma_diem_gdx = dd.ma_diem_gdx

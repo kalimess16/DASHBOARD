@@ -5,8 +5,25 @@ function sql_phan_loai_nguon_von_home_page(): string
     return "CASE WHEN h.KU_NGUONVON = '1' THEN 'TW' ELSE 'DP' END";
 }
 
-function sql_nen_home_page(bool $apDungLocNguonVon = true): string
+function sql_bang_du_lieu_home_page(string $reportDateOracle): string
 {
+    $reportDate = DateTimeImmutable::createFromFormat('!d/m/Y', $reportDateOracle);
+    if (!$reportDate instanceof DateTimeImmutable) {
+        return 'HSCV_DAILY';
+    }
+
+    return $reportDate->format('Y-m-d') === $reportDate->format('Y-m-t')
+        ? 'HSKU'
+        : 'HSCV_DAILY';
+}
+
+function sql_nen_home_page(string $bangDuLieu, bool $apDungLocNguonVon = true): string
+{
+    $bangDuLieu = strtoupper(trim($bangDuLieu));
+    if (!in_array($bangDuLieu, ['HSCV_DAILY', 'HSKU'], true)) {
+        $bangDuLieu = 'HSCV_DAILY';
+    }
+
     $phanLoaiNguonVon = sql_phan_loai_nguon_von_home_page();
     $dieuKienLocNguonVon = $apDungLocNguonVon
         ? "
@@ -35,7 +52,7 @@ function sql_nen_home_page(bool $apDungLocNguonVon = true): string
             NVL(h.KU_M_TNTHAN, 0) + NVL(h.KU_M_TNQHAN, 0) + NVL(h.KU_M_TNKHOANH, 0) AS THUNO,
             h.KU_MAKH,
             {$phanLoaiNguonVon} AS NGUON_VON
-        FROM HSCV_DAILY h
+        FROM {$bangDuLieu} h
         LEFT JOIN DMPOS p ON p.PO_MA = h.KU_MAPGD
         LEFT JOIN DMXA x ON x.MA = SUBSTR(h.KU_MADP, 1, 6) AND x.GDXFLG = 'Y' AND x.PGD_QL = h.KU_MAPGD
         LEFT JOIN DM_SCHEME s ON s.SC_MA = h.KU_SCHEM_CD
@@ -49,7 +66,7 @@ function sql_nen_home_page(bool $apDungLocNguonVon = true): string
     ";
 }
 
-function sql_nhom_chi_tiet_home_page(): string
+function sql_nhom_chi_tiet_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
@@ -63,7 +80,7 @@ function sql_nhom_chi_tiet_home_page(): string
             SUM(DNKH) AS DNKH,
             SUM(CHOVAY) AS CHOVAY,
             SUM(THUNO) AS THUNO
-        FROM (" . sql_nen_home_page() . ")
+        FROM (" . sql_nen_home_page($bangDuLieu) . ")
         GROUP BY
             MAPOS,
             TENPOS,
@@ -72,7 +89,7 @@ function sql_nhom_chi_tiet_home_page(): string
     ";
 }
 
-function sql_chi_tiet_home_page(): string
+function sql_chi_tiet_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
@@ -86,12 +103,12 @@ function sql_chi_tiet_home_page(): string
             DNKH,
             CHOVAY,
             THUNO
-        FROM (" . sql_nhom_chi_tiet_home_page() . ")
+        FROM (" . sql_nhom_chi_tiet_home_page($bangDuLieu) . ")
         ORDER BY MAPOS, MAXA, TENXA
     ";
 }
 
-function sql_nhom_chuong_trinh_vay_home_page(): string
+function sql_nhom_chuong_trinh_vay_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
@@ -105,7 +122,7 @@ function sql_nhom_chuong_trinh_vay_home_page(): string
             SUM(DNKH) AS DNKH,
             SUM(CHOVAY) AS CHOVAY,
             SUM(THUNO) AS THUNO
-        FROM (" . sql_nen_home_page() . ")
+        FROM (" . sql_nen_home_page($bangDuLieu) . ")
         GROUP BY
             MAPOS,
             TENPOS,
@@ -115,7 +132,7 @@ function sql_nhom_chuong_trinh_vay_home_page(): string
     ";
 }
 
-function sql_chuong_trinh_vay_home_page(): string
+function sql_chuong_trinh_vay_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
@@ -129,12 +146,12 @@ function sql_chuong_trinh_vay_home_page(): string
             DNKH,
             CHOVAY,
             THUNO
-        FROM (" . sql_nhom_chuong_trinh_vay_home_page() . ")
+        FROM (" . sql_nhom_chuong_trinh_vay_home_page($bangDuLieu) . ")
         ORDER BY MAXA, mapos, TENCTVAY
     ";
 }
 
-function sql_tong_the_home_page(): string
+function sql_tong_the_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
@@ -155,32 +172,32 @@ function sql_tong_the_home_page(): string
                 NVL(SUM(CHOVAY), 0) AS CHOVAY,
                 NVL(SUM(THUNO), 0) AS THUNO,
                 COUNT(*) AS TOTAL_ROWS
-            FROM (" . sql_nhom_chi_tiet_home_page() . ")
+            FROM (" . sql_nhom_chi_tiet_home_page($bangDuLieu) . ")
         ) g
         CROSS JOIN (
             SELECT COUNT(DISTINCT KU_MAKH) AS TOTAL_KH
-            FROM (" . sql_nen_home_page() . ")
+            FROM (" . sql_nen_home_page($bangDuLieu) . ")
         ) s
     ";
 }
 
-function sql_tong_theo_nguon_von_home_page(): string
+function sql_tong_theo_nguon_von_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
             NVL(SUM(CASE WHEN NGUON_VON = 'TW' THEN DUNO ELSE 0 END), 0) AS DUNO_TW,
             NVL(SUM(CASE WHEN NGUON_VON = 'DP' THEN DUNO ELSE 0 END), 0) AS DUNO_DP
-        FROM (" . sql_nen_home_page(false) . ")
+        FROM (" . sql_nen_home_page($bangDuLieu, false) . ")
     ";
 }
 
-function sql_top_chuong_trinh_vay_home_page(): string
+function sql_top_chuong_trinh_vay_home_page(string $bangDuLieu): string
 {
     return "
         SELECT
             TENCTVAY,
             SUM(DUNO) AS DUNO
-        FROM (" . sql_nhom_chuong_trinh_vay_home_page() . ")
+        FROM (" . sql_nhom_chuong_trinh_vay_home_page($bangDuLieu) . ")
         GROUP BY TENCTVAY
         ORDER BY DUNO DESC
     ";

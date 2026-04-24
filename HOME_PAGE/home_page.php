@@ -21,6 +21,21 @@ function ngay_bao_cao_mac_dinh(): string
     return date('Y-m-d', strtotime('-1 day'));
 }
 
+function ngay_bao_cao_tu_hom_nay_tro_di(string $reportDate): bool
+{
+    $reportDateObject = DateTimeImmutable::createFromFormat('!Y-m-d', $reportDate);
+    if (!$reportDateObject instanceof DateTimeImmutable) {
+        return false;
+    }
+
+    return $reportDateObject >= new DateTimeImmutable('today');
+}
+
+function thong_bao_chua_co_so_lieu_home_page(): string
+{
+    return 'Chưa có số liệu cho ngày báo cáo từ ' . date('d/m/Y') . ' trở đi.';
+}
+
 function xu_ly_mapos_dau_vao($value): string
 {
     $value = trim((string)$value);
@@ -171,10 +186,46 @@ function tao_du_lieu_bieu_do_chuong_trinh(array $rows, int $limit = 6): array
 
     return $visible;
 }
-function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $sourceFilter, string &$queryError): array
+
+function tao_du_lieu_rong_home_page(string $sourceFilter, string $queryError = ''): array
+{
+    return [
+        'totals' => [
+            'DUNO' => 0.0,
+            'DNQH' => 0.0,
+            'DNTH' => 0.0,
+            'DNKH' => 0.0,
+            'CHOVAY' => 0.0,
+            'THUNO' => 0.0,
+        ],
+        'source_totals' => [
+            'ALL' => 0.0,
+            'TW' => 0.0,
+            'DP' => 0.0,
+        ],
+        'top_scheme' => [],
+        'pos_list' => [],
+        'xa_list' => [],
+        'details_by_pos' => [],
+        'details_by_xa' => [],
+        'total_kh' => 0,
+        'total_rows' => 0,
+        'active_source' => $sourceFilter,
+        'active_source_label' => nhan_nguon_von_home_page($sourceFilter),
+        'error' => $queryError,
+    ];
+}
+
+function tao_du_lieu_home_page(string $reportDate, string $reportDateOracle, string $mapos, string $sourceFilter, string &$queryError): array
 {
     global $oracle_conn;
 
+    if (ngay_bao_cao_tu_hom_nay_tro_di($reportDate)) {
+        $queryError = thong_bao_chua_co_so_lieu_home_page();
+        return tao_du_lieu_rong_home_page($sourceFilter, $queryError);
+    }
+
+    $bangDuLieu = sql_bang_du_lieu_home_page($reportDateOracle);
     $detailRows = [];
     $schemeRows = [];
     $topSchemeRows = [];
@@ -200,10 +251,10 @@ function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $
             'P_MAPOS' => $mapos,
         ];
 
-        $detailRows = oracle_chay_truy_van($oracle_conn, sql_chi_tiet_home_page(), $binds, $queryError) ?? [];
+        $detailRows = oracle_chay_truy_van($oracle_conn, sql_chi_tiet_home_page($bangDuLieu), $binds, $queryError) ?? [];
 
         $totalsErr = '';
-        $totalsRows = oracle_chay_truy_van($oracle_conn, sql_tong_the_home_page(), $binds, $totalsErr);
+        $totalsRows = oracle_chay_truy_van($oracle_conn, sql_tong_the_home_page($bangDuLieu), $binds, $totalsErr);
         if (is_array($totalsRows) && isset($totalsRows[0])) {
             $totalsFromSql = $totalsRows[0];
             $totalRowsFromSql = isset($totalsFromSql['TOTAL_ROWS']) ? (int)$totalsFromSql['TOTAL_ROWS'] : null;
@@ -213,7 +264,7 @@ function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $
         }
 
         $sourceTotalsErr = '';
-        $sourceTotalRows = oracle_chay_truy_van($oracle_conn, sql_tong_theo_nguon_von_home_page(), $sourceTotalBinds, $sourceTotalsErr);
+        $sourceTotalRows = oracle_chay_truy_van($oracle_conn, sql_tong_theo_nguon_von_home_page($bangDuLieu), $sourceTotalBinds, $sourceTotalsErr);
         if (is_array($sourceTotalRows) && isset($sourceTotalRows[0])) {
             $sourceTotals['TW'] = ep_kieu_so($sourceTotalRows[0]['DUNO_TW'] ?? 0);
             $sourceTotals['DP'] = ep_kieu_so($sourceTotalRows[0]['DUNO_DP'] ?? 0);
@@ -223,13 +274,13 @@ function tao_du_lieu_home_page(string $reportDateOracle, string $mapos, string $
         }
 
         $schemeErr = '';
-        $schemeRows = oracle_chay_truy_van($oracle_conn, sql_chuong_trinh_vay_home_page(), $binds, $schemeErr) ?? [];
+        $schemeRows = oracle_chay_truy_van($oracle_conn, sql_chuong_trinh_vay_home_page($bangDuLieu), $binds, $schemeErr) ?? [];
         if ($schemeErr !== '' && $queryError === '') {
             $queryError = $schemeErr;
         }
 
         $topSchemeErr = '';
-        $topSchemeRows = oracle_chay_truy_van($oracle_conn, sql_top_chuong_trinh_vay_home_page(), $binds, $topSchemeErr) ?? [];
+        $topSchemeRows = oracle_chay_truy_van($oracle_conn, sql_top_chuong_trinh_vay_home_page($bangDuLieu), $binds, $topSchemeErr) ?? [];
         if ($topSchemeErr !== '' && $queryError === '') {
             $queryError = $topSchemeErr;
         }
@@ -363,7 +414,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'data') {
     header('Content-Type: application/json; charset=UTF-8');
 
     $queryError = '';
-    $data = tao_du_lieu_home_page($reportDateOracle, $mapos, $sourceFilter, $queryError);
+    $data = tao_du_lieu_home_page($reportDate, $reportDateOracle, $mapos, $sourceFilter, $queryError);
 
     echo json_encode([
         'ok' => $queryError === '',

@@ -98,10 +98,11 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 - File liên quan: `DGX.PHP`, `dgx_report_layout.php`,`dgx_sql.php`, `view/..`, `DGX.MD`
 - Mục tiêu: bổ sung dữ liệu trên cột bảng
 - Yêu cầu chi tiết: 
-    - Tại `Báo cáo theo yêu cầu ` tôi muốn bổ sung thêm cột `Mã Điểm GDX` lấy `Ma_diem_gdx`
+    - `BÁO CÁO` => HIỆN ĐANG LỖI: ORA-01799: a column may not be outer-joined to a subquery. Giúp tôi fix nó.
+    -`dgx_report_sql` tôi có thay đổi 1 số thông tin trong function này có khi lỗi trên nằm ở đây.
 - Không được đụng vào: các thư mục khác
-- Kết quả mong muốn: xử lý các vấn đề nêu trên
-- Cách kiểm tra: vào DGX xem nội dung bên trong, nhấnn "Báo cáo theo yêu cầu" - nhập, báo cáo sẽ ra kết quả
+- Kết quả mong muốn: xử lý các vấn đề nêu trên và áp dụng có các báo có liên quan.
+- Cách kiểm tra: vào DGX xem nội dung bên trong, nhấn `báo cáo` = > xem kết quả.
 - Ghi chú thêm: 
     + Kiểm tra xem nếu cần thì tạo, update các file md trong thư mục DGX
     + cần thì có thể xử lý css.
@@ -111,15 +112,15 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: 
-- Ưu tiên: 
-- File liên quan: HOME_PAGE.PHP, HOME_PAGE_SQL.PHP, DB/CONNECT_DB.PHP, view/..
+- Trạng thái: TODO
+- Ưu tiên: CAO
+- File liên quan: `HOME_PAGE.PHP`, `HOME_PAGE_SQL.PHP`, `DB/CONNECT_DB.PHP, view/..`
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 
-    + XEM ẢNH
-    + SẮP XẾP LẠI MÃ XÃ TĂNG DẦN, KHÔNG LẤY THEO TOP NỮA
+    - Điều kiện lọc `Ngày báo cáo` tôi muốn thay đổi nếu `Ngày báo cáo` là ngày cuối tháng thì câu lệnh sql trong `HOME_PAGE_SQL.PHP` có table là `hscv_daily` sẽ đổi thành `hsku`
+    - nếu `Ngày báo cáo` lớn hơn hoặc bằng ngày hiện tại thì báo chưa có số liệu.
 - Không được đụng vào: các chức năng không liện quan
-- Kết quả mong muốn: khắc phục toàn bộ các yêu cầu trên
+- Kết quả mong muốn: chọn `Ngày báo cáo` => `Tải báo cáo` => số liệu cuối thàng
 - Cách kiểm tra: vào chức năng home page sẽ thấy được đúng số liệu
 - Ghi chú thêm: 
     + Kiểm tra xem nếu cần thì tạo, update các file md liên quan. 

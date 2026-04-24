@@ -50,3 +50,8 @@
 ## Cập nhật 2026-04-13
 
 - Danh sách theo Xã sắp xếp theo `MAXA` tăng dần, không còn hiển thị theo thứ tự dư nợ giảm dần như dạng top.
+
+## Cập nhật 2026-04-24
+
+- Nếu `Ngày báo cáo` là ngày cuối tháng thì các truy vấn tại `HOME_PAGE/home_page_sql.php` chuyển từ `HSCV_DAILY` sang `HSKU`.
+- Nếu `Ngày báo cáo` lớn hơn hoặc bằng ngày hiện tại thì màn hình trả thông báo chưa có số liệu và không chạy truy vấn Oracle.

@@ -1,5 +1,10 @@
 # DGX
 
+## Cap nhat 2026-04-17
+
+- Da fix loi Oracle `ORA-01799` trong `dgx_report_sql()` bang cach bo subquery ra khoi dieu kien `LEFT JOIN I_USER`.
+- Bao cao DGX van lay `TEN_GDV` tu `I_USER`, loc theo ngay bao cao thong qua CTE `PARAMS`.
+
 ## Cap nhat 2026-04-07
 
 - Bao cao theo yeu cau da bo sung cot `Ma Diem GDX` tren popup va trong file Excel xuat ra.
