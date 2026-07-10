@@ -91,17 +91,22 @@ button {
 }
 
 .brand-mark {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    display: grid;
-    place-items: center;
-    border-radius: 9px;
-    background: #ffffff;
-    color: var(--brand-dark);
-    font-weight: 800;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: block;
+    border-radius: 10px;
+    overflow: hidden;
+    background: transparent;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
     transition: transform 0.16s ease;
+}
+
+.brand-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
 }
 
 .brand-text {

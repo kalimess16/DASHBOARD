@@ -71,6 +71,8 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard VB IOT</title>
+<link rel="icon" type="image/png" href="assets/dashboard-vb-iot-icon.png">
+<link rel="apple-touch-icon" href="assets/dashboard-vb-iot-icon.png">
 <link rel="stylesheet" href="view/style_Das.php">
 </head>
 <body>
@@ -85,7 +87,9 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
                 data-home-id="<?php echo dashboard_html($idTrangChu); ?>"
                 aria-label="Mở trang tổng hợp dư nợ"
             >
-                <span class="brand-mark">VB</span>
+                <span class="brand-mark">
+                    <img src="assets/dashboard-vb-iot-icon.png" alt="Dashboard VB IOT">
+                </span>
                 <span class="brand-text">
                     <strong>Dashboard VB IOT</strong>
                     <small>Home Page</small>
@@ -115,6 +119,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
                                 data-feature-id="<?php echo dashboard_html((string)($mucCon['id'] ?? '')); ?>"
                                 data-src="<?php echo dashboard_html((string)($mucCon['duong_dan'] ?? '')); ?>"
                                 data-title="<?php echo dashboard_html((string)($mucCon['nhan'] ?? '')); ?>"
+                                data-open-mode="<?php echo !empty($mucCon['mo_tab_moi']) ? 'new-tab' : 'iframe'; ?>"
                             >
                                 <span class="nav-item__label"><?php echo dashboard_html((string)($mucCon['nhan'] ?? '')); ?></span>
                                 <?php if (!empty($mucCon['hien_huy_hieu'])): ?>
@@ -239,12 +244,28 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
         dongTatCaMenu('');
     }
 
+    function moLinkNgoai(duongDan) {
+        if (!duongDan) {
+            return;
+        }
+        var tabMoi = window.open(duongDan, '_blank', 'noopener,noreferrer');
+        if (tabMoi) {
+            tabMoi.opener = null;
+        }
+        dongTatCaMenu('');
+    }
+
     function moNoiDungTuNut(nutBam) {
         if (!nutBam) {
             return;
         }
+        var duongDan = nutBam.getAttribute('data-src') || '';
+        if ((nutBam.getAttribute('data-open-mode') || '') === 'new-tab') {
+            moLinkNgoai(duongDan);
+            return;
+        }
         moNoiDung(
-            nutBam.getAttribute('data-src') || '',
+            duongDan,
             nutBam.getAttribute('data-feature-id') || '',
             nutBam.getAttribute('data-title') || ''
         );

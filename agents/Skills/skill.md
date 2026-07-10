@@ -7,7 +7,7 @@ File này là nơi tập trung mô tả tính năng của toàn bộ dashboard. 
 - Dự án PHP chạy trên XAMPP tại `C:\xampp\htdocs\dashboard`.
 - `index.php` là shell chính, mở các module trong `iframe`.
 - `HOME_PAGE/home_page.php` là màn hình mặc định, được load ngay khi vào dashboard và không còn nằm trong menu Tín dụng.
-- Menu chính hiện dùng dạng ngang, gồm nhóm cha - con: Báo cáo, Văn bản, Hệ thống.
+- Menu chính hiện dùng dạng ngang, gồm nhóm cha - con: Báo cáo, Văn bản, Hệ thống, Tiện ích khác.
 - DB dùng MySQL cho văn bản/hệ thống, MySQL local cho lưu trữ văn bản, Oracle cho báo cáo DGX và dư nợ.
 - Thư viện chính: `phpoffice/phpspreadsheet` để xuất Excel.
 
@@ -115,3 +115,13 @@ File này là nơi tập trung mô tả tính năng của toàn bộ dashboard. 
 - DGX: lint `DGX/dgx.php`, `DGX/dgx_sql.php`, `DGX/dgx_report_layout.php` và kiểm tra xuất Excel.
 - VB_IOT: lint `VB_IOT/vb_iot.php`, `VB_IOT/vb_iot_sql.php`, `VB_IOT/view_file.php` và kiểm tra badge chưa đọc.
 - USER-SYSTEM: lint `USER-SYSTEM/user_system.php`, `USER-SYSTEM/user_system_sql.php`, `USER-SYSTEM/layout_insert.php` và kiểm tra lọc phòng ban.
+## Tiện ích khác - Link ngoài
+- Nhóm menu: `Tiện ích khác` trong `dashboard_cau_hinh_menu()`.
+- Các mục con không nạp trong iframe; khi bấm sẽ mở tab mới bằng `window.open(..., '_blank')`.
+- Danh sách link hiện tại:
+  - Báo cáo chi nhánh: `http://10.64.0.253:8080/DNGREPORTS/index.html?TTBC_TW_USERNAME=KHNV&TTBC_TW_REPORTGRADE=2`
+  - Quản lý Công việc: `http://10.64.0.251:8080/QLCV/login.html`
+  - Báo cáo hoạt động GDX: `http://10.64.0.247/bcgdx/`
+  - Chỉ tiêu KHNV: `http://10.64.0.247/ct_khnv/`
+  - Quản lý tín dụng cơ sở (Demo): `http://10.64.0.236/qltdcs/login.php`
+- Quy ước cấu hình: mỗi mục link ngoài đặt `mo_tab_moi => true`; shell sẽ sinh `data-open-mode="new-tab"` để không cache iframe.
