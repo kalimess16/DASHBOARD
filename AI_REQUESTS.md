@@ -93,16 +93,16 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: 
-- Ưu tiên: 
+- Trạng thái: TODO
+- Ưu tiên: CAO
 - File liên quan: `DGX.PHP`, `dgx_report_layout.php`,`dgx_sql.php`, `view/..`, `DGX.MD`
 - Mục tiêu: bổ sung dữ liệu trên cột bảng
 - Yêu cầu chi tiết: 
-    - `BÁO CÁO` => HIỆN ĐANG LỖI: ORA-01799: a column may not be outer-joined to a subquery. Giúp tôi fix nó.
-    -`dgx_report_sql` tôi có thay đổi 1 số thông tin trong function này có khi lỗi trên nằm ở đây.
+    - `BÁO CÁO THEO YÊU CẦU ` => TÔI MUỐN BỔ SUNG THÊM CỘT `LÃNH ĐẠO THAM GIA GDX`
+    - TRONG SQL THÌ ĐỐI VỚI BẢNG I_USER NẾU iu_nv IN ('POGD','POPGD') THÌ HIỂN THỊ TÊN LÃNH ĐẠO (IU_TEN) TRONG `LÃNH ĐẠO THAM GIA GDX`, NGƯỢC LẠI NẾU KHÔNG CÓ THÌ ĐỂ TRỐNG
 - Không được đụng vào: các thư mục khác
 - Kết quả mong muốn: xử lý các vấn đề nêu trên và áp dụng có các báo có liên quan.
-- Cách kiểm tra: vào DGX xem nội dung bên trong, nhấn `báo cáo` = > xem kết quả.
+- Cách kiểm tra: vào DGX xem nội dung bên trong, nhấn `báo cáo THEO YÊU CẦU` = > xem kết quả.
 - Ghi chú thêm: 
     + Kiểm tra xem nếu cần thì tạo, update các file md trong thư mục DGX
     + cần thì có thể xử lý css.
@@ -112,8 +112,8 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: TODO
-- Ưu tiên: CAO
+- Trạng thái: 
+- Ưu tiên: 
 - File liên quan: `HOME_PAGE.PHP`, `HOME_PAGE_SQL.PHP`, `DB/CONNECT_DB.PHP, view/..`
 - Mục tiêu: bổ sung dữ liệu/ thay đổi dữu liệu/ css
 - Yêu cầu chi tiết: 
@@ -145,15 +145,18 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái:
-- Ưu tiên:
-- File liên quan:
-- Mục tiêu:
+- Trạng thái: 
+- Ưu tiên: CAO
+- File liên quan: `vb_iot_sql.php`, `vb_iot_tmp_backup.php`, `vb_iot.php`, `view_file.php`, `view/style_vb_iot.php`
+- Mục tiêu: bổ sung tính năng tìm kiếm
 - Yêu cầu chi tiết:
-- Không được đụng vào:
-- Kết quả mong muốn:
-- Cách kiểm tra:
+    - kiếm tra lại tính năng `tìm kiếm theo mã số văn bản hoặc người nhận` hiện tính năng này tôi muốn chỉ lọc theo người nhận thôi, không lấy theo mã số văn bản nữa
+- Không được đụng vào: các file không liên quan
+- Kết quả mong muốn: tìm kiếm được kết quả mong muốn
+- Cách kiểm tra: vào nhập người nhận => search => ra kết quả cần
 - Ghi chú thêm:
+    + Kiểm tra xem nếu cần thì tạo, update các file md liên quan. 
+    + cần thì có thể xử lý css, có thể sửa css cho đẹp hơn.
 
 ## view
 

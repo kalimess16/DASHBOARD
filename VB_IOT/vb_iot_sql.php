@@ -55,6 +55,18 @@ function vb_iot_list_sql(string $whereSql): string
     ";
 }
 
+function vb_iot_receiver_filter_sql(): string
+{
+    return "
+        EXISTS (
+            SELECT 1
+            FROM eoffice_approval_receiver r
+            WHERE r.MaSo = d.maso
+              AND r.NguoiNhan LIKE ?
+        )
+    ";
+}
+
 function vb_iot_receiver_sql(string $placeholders): string
 {
     return "

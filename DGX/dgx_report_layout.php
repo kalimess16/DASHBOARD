@@ -66,10 +66,11 @@
                 <thead>
                     <tr>
                         <th style="width: 10%;">Ngày giao dịch xã</th>
-                        <th style="width: 9%;">Mã POS</th>
-                        <th style="width: 15%;">Tên GDV</th>
-                        <th style="width: 10%;">Mã Điểm GDX</th>
-                        <th style="width: 15%;">Điểm GDX</th>
+                        <th style="width: 8%;">Mã POS</th>
+                        <th style="width: 13%;">Tên GDV</th>
+                        <th style="width: 14%;">Lãnh đạo tham gia GDX</th>
+                        <th style="width: 9%;">Mã Điểm GDX</th>
+                        <th style="width: 14%;">Điểm GDX</th>
                         <th style="width: 7%;">Tổ TN</th>
                         <th style="width: 7%;">Số KU</th>
                         <th style="width: 7%;">KH GN</th>
@@ -81,7 +82,7 @@
                     </tr>
                 </thead>
                 <tbody id="customReportBody">
-                    <tr><td colspan="13" class="fixed-empty">Nhập điều kiện rồi nhấn Báo cáo.</td></tr>
+                    <tr><td colspan="14" class="fixed-empty">Nhập điều kiện rồi nhấn Báo cáo.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -486,7 +487,7 @@
         }
 
         function setTableMessage(message) {
-            tbody.innerHTML = '<tr><td colspan="13" class="fixed-empty">' + esc(message) + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" class="fixed-empty">' + esc(message) + '</td></tr>';
         }
 
         function setMetaText(message) {
@@ -556,6 +557,7 @@
                     + '<td>' + esc(row.NGAY_GIAO_DICH_XA || '') + '</td>'
                     + '<td>' + esc(row.MAPOS || '') + '</td>'
                     + '<td title="' + esc(row.TEN_GDV || '') + '">' + esc(row.TEN_GDV || '') + '</td>'
+                    + '<td title="' + esc(row.LANH_DAO_THAM_GIA_GDX || '') + '">' + esc(row.LANH_DAO_THAM_GIA_GDX || '') + '</td>'
                     + '<td>' + esc(row.MA_DIEM_GDX || '') + '</td>'
                     + '<td title="' + esc(row.DIEM_GDX || '') + '">' + esc(row.DIEM_GDX || '') + '</td>'
                     + '<td>' + esc(formatCount(row.TO_TN)) + '</td>'

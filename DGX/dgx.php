@@ -529,7 +529,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'custom_report_excel') {
     $sheet->setTitle('BaoCaoYeuCau');
     $spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(12);
 
-    $lastColumn = 'M';
+    $lastColumn = 'N';
     $titleRow = 1;
     $infoRow = 2;
     $headerRow = 3;
@@ -550,7 +550,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'custom_report_excel') {
     $sheet->getStyle('A' . $infoRow)->getFont()->setName('Times New Roman')->setItalic(true)->setSize(12);
     $sheet->getStyle('A' . $infoRow . ':' . $lastColumn . $infoRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
 
-    $headers = ['NGÀY GIAO DỊCH XÃ', 'MÃ POS', 'TÊN GDV', 'MÃ ĐIỂM GDX', 'ĐIỂM GDX', 'TỔ TN', 'SỐ KU', 'KH GN', 'SỐ TIỀN GN', 'KH TNCN', 'KH TKCKH', 'GỬI TK', 'RÚT TK'];
+    $headers = ['NGÀY GIAO DỊCH XÃ', 'MÃ POS', 'TÊN GDV', 'LÃNH ĐẠO THAM GIA GDX', 'MÃ ĐIỂM GDX', 'ĐIỂM GDX', 'TỔ TN', 'SỐ KU', 'KH GN', 'SỐ TIỀN GN', 'KH TNCN', 'KH TKCKH', 'GỬI TK', 'RÚT TK'];
     foreach ($headers as $i => $header) {
         $sheet->setCellValueByColumnAndRow($i + 1, $headerRow, $header);
     }
@@ -567,30 +567,31 @@ if (isset($_GET['api']) && $_GET['api'] === 'custom_report_excel') {
         $sheet->setCellValueByColumnAndRow(1, $rowIndex, (string)($row['NGAY_GIAO_DICH_XA'] ?? ''));
         $sheet->setCellValueByColumnAndRow(2, $rowIndex, (string)($row['MAPOS'] ?? ''));
         $sheet->setCellValueByColumnAndRow(3, $rowIndex, (string)($row['TEN_GDV'] ?? ''));
-        $sheet->setCellValueByColumnAndRow(4, $rowIndex, (string)($row['MA_DIEM_GDX'] ?? ''));
-        $sheet->setCellValueByColumnAndRow(5, $rowIndex, (string)($row['DIEM_GDX'] ?? ''));
-        $sheet->setCellValueByColumnAndRow(6, $rowIndex, normalize_excel_number($row['TO_TN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(7, $rowIndex, normalize_excel_number($row['SO_KU'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(8, $rowIndex, normalize_excel_number($row['KH_GN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(9, $rowIndex, normalize_excel_number($row['SOTIEN_GN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(10, $rowIndex, normalize_excel_number($row['KH_TNCN'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(11, $rowIndex, normalize_excel_number($row['KH_TKCKH'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(12, $rowIndex, normalize_excel_number($row['GUITK'] ?? 0));
-        $sheet->setCellValueByColumnAndRow(13, $rowIndex, normalize_excel_number($row['RUTTK'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(4, $rowIndex, (string)($row['LANH_DAO_THAM_GIA_GDX'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(5, $rowIndex, (string)($row['MA_DIEM_GDX'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(6, $rowIndex, (string)($row['DIEM_GDX'] ?? ''));
+        $sheet->setCellValueByColumnAndRow(7, $rowIndex, normalize_excel_number($row['TO_TN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(8, $rowIndex, normalize_excel_number($row['SO_KU'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(9, $rowIndex, normalize_excel_number($row['KH_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(10, $rowIndex, normalize_excel_number($row['SOTIEN_GN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(11, $rowIndex, normalize_excel_number($row['KH_TNCN'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(12, $rowIndex, normalize_excel_number($row['KH_TKCKH'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(13, $rowIndex, normalize_excel_number($row['GUITK'] ?? 0));
+        $sheet->setCellValueByColumnAndRow(14, $rowIndex, normalize_excel_number($row['RUTTK'] ?? 0));
         $rowIndex++;
     }
 
     $lastDataRow = $rowIndex - 1;
     if ($lastDataRow >= $dataStartRow) {
-        foreach (['F', 'G', 'H', 'J', 'K'] as $column) {
+        foreach (['G', 'H', 'I', 'K', 'L'] as $column) {
             $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)->getNumberFormat()->setFormatCode('[$-409]#,##0');
         }
-        foreach (['I', 'L', 'M'] as $column) {
+        foreach (['J', 'M', 'N'] as $column) {
             $sheet->getStyle($column . $dataStartRow . ':' . $column . $lastDataRow)->getNumberFormat()->setFormatCode('[$-42A]#,##0');
         }
         $sheet->getStyle('A' . $dataStartRow . ':B' . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('D' . $dataStartRow . ':D' . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('F' . $dataStartRow . ':' . $lastColumn . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('E' . $dataStartRow . ':E' . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('G' . $dataStartRow . ':' . $lastColumn . $lastDataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
     }
 
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');

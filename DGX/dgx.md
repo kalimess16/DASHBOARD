@@ -1,5 +1,12 @@
 # DGX
 
+## Cap nhat 2026-05-26
+
+- Bao cao theo yeu cau da bo sung cot `Lanh dao tham gia GDX` tren popup va file Excel xuat ra.
+- SQL custom report tra them truong `LANH_DAO_THAM_GIA_GDX` bang cach lay `KSV` trong cac bang `OFL_*` va join sang `I_USER.IU_MA`, chi nhan `I_USER.IU_NV` thuoc `POGD`, `POPGD` de lay `I_USER.IU_TEN`.
+- Cac khoi tong hop custom report da group/join them theo `KSV` de cot lanh dao di dung voi tung dong du lieu.
+- Da lint: `DGX/dgx.php`, `DGX/dgx_sql.php`, `DGX/dgx_report_layout.php`, `view/Style_dgx.php`.
+
 ## Cap nhat 2026-04-17
 
 - Da fix loi Oracle `ORA-01799` trong `dgx_report_sql()` bang cach bo subquery ra khoi dieu kien `LEFT JOIN I_USER`.

@@ -544,7 +544,7 @@ if ($keyword !== '') {
     $types .= 'ss';
 }
 if ($doc_no !== '') {
-    $where[] = 'CAST(d.maso AS CHAR) LIKE ?';
+    $where[] = vb_iot_receiver_filter_sql();
     $params[] = '%' . $doc_no . '%';
     $types .= 's';
 }
@@ -839,7 +839,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     <form method="get" action="<?php echo $index_url; ?>" class="search-form">
         <input type="hidden" name="page" id="search_page" value="<?php echo $page; ?>">
         <input class="field-keyword" type="text" name="keyword" placeholder="Tìm theo tiêu đề hoặc ký hiệu văn bản" value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>">
-        <input class="field-docno" type="text" name="doc_no" placeholder="Tìm theo mã số văn bản" value="<?php echo htmlspecialchars($doc_no, ENT_QUOTES, 'UTF-8'); ?>">
+        <input class="field-docno" type="text" name="doc_no" placeholder="Tìm theo người nhận" value="<?php echo htmlspecialchars($doc_no, ENT_QUOTES, 'UTF-8'); ?>">
         <input class="from-wrap field-date" type="date" name="from_date" value="<?php echo htmlspecialchars($from_date, ENT_QUOTES, 'UTF-8'); ?>" data-default-value="<?php echo htmlspecialchars($default_from_date, ENT_QUOTES, 'UTF-8'); ?>" title="Tu ngay">
         <input class="to-wrap field-date" type="date" name="to_date" value="<?php echo htmlspecialchars($to_date, ENT_QUOTES, 'UTF-8'); ?>" data-default-value="<?php echo htmlspecialchars($default_to_date, ENT_QUOTES, 'UTF-8'); ?>" title="Den ngay">
         <select class="combo-select condition-mode field-mode" id="date_mode" name="date_mode" title="Kieu loc ngay">
