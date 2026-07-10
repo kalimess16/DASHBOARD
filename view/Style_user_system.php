@@ -2,20 +2,21 @@
 header('Content-Type: text/css; charset=UTF-8');
 ?>
 :root {
-    --bg-1: #eef7ff;
-    --bg-2: #dfeeff;
-    --surface: rgba(255, 255, 255, 0.92);
-    --line: #c9dcee;
-    --line-soft: #e4edf6;
-    --text: #17324d;
-    --muted: #58718d;
-    --brand: #0c5a8a;
-    --brand-2: #093b64;
-    --accent: #1c8dd6;
-    --accent-2: #16a085;
-    --danger: #cc4a4a;
-    --shadow-lg: 0 22px 48px rgba(9, 59, 100, 0.14);
-    --shadow-sm: 0 8px 22px rgba(9, 59, 100, 0.10);
+    --bg-1: #eaf6fb;
+    --bg-2: #d7ecf7;
+    --surface: rgba(255, 255, 255, 0.94);
+    --line: #b8d4e4;
+    --line-soft: #d9eaf3;
+    --text: #061a2f;
+    --muted: #5e7485;
+    --brand: #0b3f6f;
+    --brand-2: #061a2f;
+    --accent: #0f6ea8;
+    --accent-2: #0ea5b7;
+    --destiny-9: #4f46a8;
+    --danger: #b42318;
+    --shadow-lg: 0 22px 48px rgba(6, 26, 47, 0.14);
+    --shadow-sm: 0 8px 22px rgba(6, 26, 47, 0.1);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -105,8 +106,8 @@ html, body {
 .btn-search,
 .action-btn-primary {
     color: #ffffff;
-    background: linear-gradient(180deg, #1a92dd 0%, #0d5c93 100%);
-    border-color: #0d5c93;
+    background: linear-gradient(180deg, #0f6ea8 0%, #0b3f6f 100%);
+    border-color: #0b3f6f;
     box-shadow: var(--shadow-sm);
 }
 .hero-btn-ghost {
@@ -274,7 +275,7 @@ td:first-child {
     border-left: 0;
 }
 th {
-    background: linear-gradient(180deg, #137ec1 0%, #0d5c93 100%);
+    background: linear-gradient(180deg, #0f6ea8 0%, #0b3f6f 100%);
     color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.25px;
@@ -417,8 +418,8 @@ tbody tr:hover td {
 }
 .pagination span.current {
     color: #ffffff;
-    border-color: #0d5c93;
-    background: linear-gradient(180deg, #1a92dd 0%, #0d5c93 100%);
+    border-color: #0b3f6f;
+    background: linear-gradient(180deg, #0f6ea8 0%, #0b3f6f 100%);
     box-shadow: var(--shadow-sm);
 }
 .pagination span.nav {

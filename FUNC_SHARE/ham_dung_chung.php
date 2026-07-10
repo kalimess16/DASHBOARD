@@ -506,20 +506,7 @@ function dashboard_cau_hinh_menu(): array
                 ],
             ],
         ],
-        [
-            'id' => 'tin-dung',
-            'nhan' => 'Tín Dụng',
-            'mo_ta' => 'Tong hop du no va thong ke nguon von.',
-            'muc_con' => [
-                [
-                    'id' => 'tong-hop-du-no',
-                    'nhan' => 'Tổng hợp dư nợ',
-                    'duong_dan' => 'HOME_PAGE/home_page.php',
-                    'nhan_ngan' => 'TD',
-                    'hien_huy_hieu' => false,
-                ],
-            ],
-        ],
+
         [
             'id' => 'van-ban',
             'nhan' => 'Văn Bản',
