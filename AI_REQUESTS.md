@@ -61,20 +61,6 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
     + nếu cần thì bổ sung vào md
     + có thể chỉnh sửa lại sytle
 
-## CODE-ORCALE_SQL
-
-### Task
-
-- Trạng thái: 
-- Ưu tiên:  
-- File liên quan: CODE.SQL
-- Mục tiêu: Tìm kiếm nguyên nhân và phân tích TẠI SAO LẠI THIẾU SỐ LIỆU
-- Yêu cầu chi tiết: KHI TÔI XUẤT THÌ SỐ LIỆU DƯ NỢ LẠI THIẾU 1 ÍT SAO VỚI DỮ LIỆU TỔNG TÔI CÓ. vỀ PHẦN TỔNG DƯ NỢ
-- Không được đụng vào: TOÀN BỘ BỘ CÁC FILE KHÁC
-- Kết quả mong muốn: có thể chạy dc - DONE và không ERROR
-- Cách kiểm tra: KHÔNG
-- Ghi chú thêm: CHỈ TẬP CHUNG VÀO FILE CODE.SQL
-
 ## DB
 
 ### Task
@@ -93,7 +79,7 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: TODO
+- Trạng thái: 
 - Ưu tiên: CAO
 - File liên quan: `DGX.PHP`, `dgx_report_layout.php`,`dgx_sql.php`, `view/..`, `DGX.MD`
 - Mục tiêu: bổ sung dữ liệu trên cột bảng
@@ -145,12 +131,12 @@ Khi muốn mình làm việc theo file này, bạn chỉ cần nhắn một câu
 
 ### Task
 
-- Trạng thái: 
+- Trạng thái: TODO
 - Ưu tiên: CAO
 - File liên quan: `vb_iot_sql.php`, `vb_iot_tmp_backup.php`, `vb_iot.php`, `view_file.php`, `view/style_vb_iot.php`
 - Mục tiêu: bổ sung tính năng tìm kiếm
 - Yêu cầu chi tiết:
-    - kiếm tra lại tính năng `tìm kiếm theo mã số văn bản hoặc người nhận` hiện tính năng này tôi muốn chỉ lọc theo người nhận thôi, không lấy theo mã số văn bản nữa
+    - hiện tại file `vb_iot.php` đang lỗi đỏ, giúp tôi khác phục. đang lỗi `$conn`
 - Không được đụng vào: các file không liên quan
 - Kết quả mong muốn: tìm kiếm được kết quả mong muốn
 - Cách kiểm tra: vào nhập người nhận => search => ra kết quả cần

@@ -366,8 +366,18 @@ function getPlatformIssues(&$errors, &$warnings, $install)
         );
     }
 
-    if (extension_loaded('ionCube Loader') && ioncube_loader_iversion() < 40009) {
-        $ioncube = ioncube_loader_version();
+    $ioncubeVersion = extension_loaded('ionCube Loader') && function_exists('ioncube_loader_version')
+        ? call_user_func('ioncube_loader_version')
+        : null;
+    $ioncubeIntegerVersion = extension_loaded('ionCube Loader') && function_exists('ioncube_loader_iversion')
+        ? call_user_func('ioncube_loader_iversion')
+        : null;
+
+    if ($ioncubeVersion !== null && (
+        ($ioncubeIntegerVersion !== null && $ioncubeIntegerVersion < 40009)
+        || ($ioncubeIntegerVersion === null && version_compare($ioncubeVersion, '4.0.9', '<'))
+    )) {
+        $ioncube = $ioncubeVersion;
         $errors['ioncube'] = array(
             'Your ionCube Loader extension ('.$ioncube.') is incompatible with Phar files.',
             'Upgrade to ionCube 4.0.9 or higher or remove this line (path may be different) from your `php.ini` to disable it:',
@@ -942,6 +952,8 @@ class Installer
             }
             return true;
         }
+
+        $data = null;
 
         $this->errHandler->start();
 

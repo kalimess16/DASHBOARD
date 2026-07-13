@@ -5,6 +5,11 @@ dashboard_khoi_tao_phien('DASHBOARD_VB_IOT_SESSID');
 require_once __DIR__ . '/../DB/connect_DB.php';
 require_once __DIR__ . '/vb_iot_sql.php';
 
+/** @var mysqli|null $conn */
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    die('Khong ket noi duoc DB cho VB_IOT.');
+}
+
 function normalize_date_input(string $value): string
 {
     return dashboard_chuan_hoa_ngay($value);
@@ -787,7 +792,8 @@ if (!empty($rows)) {
         }
     }
 }
-$receiver_json = json_encode($receiver_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$json_script_flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+$receiver_json = json_encode($receiver_map, $json_script_flags);
 if ($receiver_json === false) {
     $receiver_json = '{}';
 }
@@ -1124,7 +1130,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
         form.addEventListener('submit', function (event) {
             var submitter = event.submitter || null;
             var isMarkAll = submitter && submitter.name === 'mark_all_read';
-            searchPageInput.value = isMarkAll ? '<?php echo $page; ?>' : '1';
+            searchPageInput.value = isMarkAll ? <?php echo json_encode((string)$page, $json_script_flags); ?> : '1';
             if (window.DashboardLoading) {
                 window.DashboardLoading.show();
             }
@@ -1269,7 +1275,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 </script>
 <script>
 (function () {
-    var indexUrl = '<?php echo $index_url; ?>';
+    var indexUrl = <?php echo json_encode($index_url, $json_script_flags); ?>;
     var overlay = document.getElementById('lsOverlay');
     var dialog = document.getElementById('lsDialog');
     var dragHandle = document.getElementById('lsDialogTitle');
@@ -1287,7 +1293,7 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     var docInfo = document.querySelector('.ls-doc-info');
     var openButtons = document.querySelectorAll('.btn-archive-popup');
 
-    if (!overlay || !dialog || !dragHandle || !closeBtn || !saveBtn || !typeSelect || !statusBox || !listBody || !listWrap || !docSymbol || !docDate || !docTitle || !docInfo || !lsQuickFilter || openButtons.length === 0) {
+    if (!overlay || !dialog || !dragHandle || !closeBtn || !saveBtn || !typeSelect || !statusBox || !listBody || !listWrap || !docSymbol || !docDate || !docTitle || !docInfo || !lsQuickFilter) {
         return;
     }
 
