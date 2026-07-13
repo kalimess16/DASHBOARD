@@ -116,7 +116,7 @@ button {
 }
 
 .brand-text strong {
-    font-size: 18px;
+    font-size: 30px;
     line-height: 1.12;
 }
 

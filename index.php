@@ -92,7 +92,6 @@ if (isset($_GET['api']) && $_GET['api'] === 'unread_count') {
                 </span>
                 <span class="brand-text">
                     <strong>Dashboard VB IOT</strong>
-                    <small>Home Page</small>
                 </span>
             </button>
             <span class="creator-chip"><?php echo dashboard_html($thongTinChanTrang['nguoi_tao']); ?></span>

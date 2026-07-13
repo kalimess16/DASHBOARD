@@ -539,7 +539,7 @@ function dashboard_cau_hinh_menu(): array
             'muc_con' => [
                 [
                     'id' => 'bao-cao-chi-nhanh',
-                    'nhan' => 'Báo cáo chi nhánh',
+                    'nhan' => 'Báo cáo chi nhánh 🔥🔥🔥',
                     'duong_dan' => 'http://10.64.0.253:8080/DNGREPORTS/index.html?TTBC_TW_USERNAME=KHNV&TTBC_TW_REPORTGRADE=2',
                     'nhan_ngan' => 'BC',
                     'hien_huy_hieu' => false,
@@ -547,9 +547,17 @@ function dashboard_cau_hinh_menu(): array
                 ],
                 [
                     'id' => 'quan-ly-cong-viec',
-                    'nhan' => 'Quản lý Công việc',
+                    'nhan' => 'Quản lý Công việc 🔥🔥',
                     'duong_dan' => 'http://10.64.0.251:8080/QLCV/login.html',
                     'nhan_ngan' => 'CV',
+                    'hien_huy_hieu' => false,
+                    'mo_tab_moi' => true,
+                ],
+                [
+                    'id' => 'bao-cao-luong',
+                    'nhan' => 'Báo cáo lương 🔥',
+                    'duong_dan' => 'http://10.64.0.252/salary/login.php',
+                    'nhan_ngan' => 'BCL',
                     'hien_huy_hieu' => false,
                     'mo_tab_moi' => true,
                 ],
@@ -571,8 +579,8 @@ function dashboard_cau_hinh_menu(): array
                 ],
                 [
                     'id' => 'quan-ly-tin-dung-co-so-demo',
-                    'nhan' => 'Quản lý tín dụng cơ sở (Demo)',
-                    'duong_dan' => 'http://10.64.0.236/qltdcs/login.php',
+                    'nhan' => 'Quản lý tín dụng cơ sở',
+                    'duong_dan' => 'http://10.64.0.247/KHTDCS/login.php',
                     'nhan_ngan' => 'TD',
                     'hien_huy_hieu' => false,
                     'mo_tab_moi' => true,
